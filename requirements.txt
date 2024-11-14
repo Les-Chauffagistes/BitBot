@@ -1,0 +1,6 @@
+discord.py
+aiofiles
+aiohttp
+requests
+asyncio
+python-dotenv
