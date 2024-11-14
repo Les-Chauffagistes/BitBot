@@ -1,5 +1,5 @@
 from init import *
-from fun.loops import *
+from functions.loops import *
 from asyncio import gather
 import commands.commands
 
@@ -16,7 +16,7 @@ async def stop_task():
 async def on_ready():
     global tasks
     log.info('En ligne')
-    if sync:
+    if SYNC:
         cmds = await tree.sync()
         log.info(f'{len(cmds)} commandes slash synchronisées')
     
