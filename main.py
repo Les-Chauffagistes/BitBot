@@ -3,6 +3,7 @@ from server import handlers
 import asyncio
 import events.on_interaction
 import events.on_ready
+import events.on_message
 
 async def main():
     log.info("Démarrage du serveur...")
