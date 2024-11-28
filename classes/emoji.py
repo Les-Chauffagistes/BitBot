@@ -11,6 +11,12 @@ class Emoji(Enum):
     pay = "<:pay:1310270876704571464>"
     edit = "<:edit:1287775378944954408>"
     image = "<:image:1310288606023127082>"
+    delete = "<:delete:1310513587588169748>"
+    share = "<:share:1310514510397968414>"
+    world = "<:world:1310632749245399181>"
+    lock = "<:lock:1310632703330091098>"
+    back = "<:back:1310238973565735042>"
+    shop_bag = "<:shop_bag:1310906629243539487>"
 
     def __str__(self):
         return self.value

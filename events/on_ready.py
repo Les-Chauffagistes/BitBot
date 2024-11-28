@@ -36,7 +36,7 @@ Inscrivez vous en tant qu'acheteur ou vendeur pour enrichir votre expérience au
 ## En tant qu'acheteur
 Vous pouvez participer aux enchères et acheter des produits mis en vente sur Discord. Vous pouvez payer via votre wallet Mainnet ou Discord.
 ## En tant que vendeur
-Vous recevez tous les privilèges d'acheteur, en plus du droit de créer des enchères, et de mettre en vente des articles sur Discord. Vous choisissez les modalité de paiement et d'envoi des produits physiques.
+Vous recevez tous les privilèges d'acheteur, en plus du droit de créer des enchères, et de mettre en vente des articles sur Discord. Vous choisissez les modalités de paiement et d'envoi des produits physiques.
 
 > Les inscriptions sont soumises aux conditions de services. Consultez les [conditions de vente](https://swakraft.hopto.org/pilabs/terms) et la [charte du vendeur](https://swakraft.hopto.org/pilabs/guidelines). Nécessite un profil Pi vérifié sur le serveur.
 """.strip(),
@@ -63,7 +63,8 @@ Vous recevez tous les privilèges d'acheteur, en plus du droit de créer des enc
         
         tasks = [
             loop_miner(),
-            loop_pi_deposit()
+            loop_pi_deposit(),
+            loop_onchain_tx()
         ]
         await gather(*tasks)
 

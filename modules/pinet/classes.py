@@ -4,6 +4,20 @@ from datetime import datetime
 
 from functions.utils import read_file, write_file
 
+class Transaction:
+    def __init__(self, data: dict, wallet: 'Wallet', network: Literal['testnet', 'mainnet']):
+        self.hash = data.get("hash")
+        self.source = Wallet(data.get("source"))
+        self._network_ = network
+        self.wallet = wallet
+    
+    @property
+    async def payment(self):
+        return Payment(
+            (await api.request(f"/transactions/{self.hash}/operations", 'get', self._network_)).get("_embedded", {}).get("records", [])[0],
+            self
+        )
+
 class Payment:
     def __init__(self, data: dict, wallet: 'Wallet'):
         self.id = data.get("id")
@@ -23,6 +37,12 @@ class Payment:
     async def blacklist(self):
         return await Wallet.blacklist(self)
     
+    async def is_notified(self):
+        return await Wallet.is_notified(self)
+    
+    async def notify(self):
+        return await Wallet.notify(self)
+    
     def __repr__(self):
         return f'<{self.source.address[0:5]}...{self.source.address[-5:-1]} -> {self.amount} -> {self.destination.address[0:5]}...{self.destination.address[-5:-1]}>'
 
@@ -38,21 +58,21 @@ class Wallet:
         """Renvoie le montant en Pi Mainnet de l'utilisateur. Renvoie None si pas de wallet"""
         return float((await api.request(f'/accounts/{self.address}', 'get', 'mainnet')).get("balances", [{}])[0].get("balance"))
     
-    async def get_mainnet_history(self, limit: int = 10) -> list[Payment]:
+    async def get_mainnet_history(self, limit: int = 5) -> list[Transaction]:
         return [
-            Payment(payment, self) for payment in (
+            Transaction(payment, self, 'mainnet') for payment in (
                 await api.request(
-                    f'/accounts/{self.address}/payments?limit={limit}&order=desc', 
+                    f'/accounts/{self.address}/transactions?limit={limit}&order=desc', 
                     'get',
                     'mainnet'
                 )).get("_embedded", {}).get('records', [])
             ]
     
-    async def get_testnet_history(self, limit: int = 10) -> list[Payment]:
+    async def get_testnet_history(self, limit: int = 5) -> list[Transaction]:
         return [
-            Payment(payment, self) for payment in (
+            Transaction(payment, self, 'testnet') for payment in (
                 await api.request(
-                    f'/accounts/{self.address}/payments?limit={limit}&order=desc', 
+                    f'/accounts/{self.address}/transactions?limit={limit}&order=desc', 
                     'get',
                     'testnet'
                 )).get("_embedded", {}).get('records', [])
@@ -66,6 +86,15 @@ class Wallet:
         blacklisted: list[str] = await read_file("wallets/pi_blacklist_payments.json")
         blacklisted.append(payment.hash)
         await write_file("wallets/pi_blacklist_payments.json", blacklisted)
+    
+    async def is_notified(payment: Payment):
+        notified: list[str] = await read_file("wallets/pi_notified_payments.json")
+        return payment.hash in notified
+    
+    async def notify(payment: Payment):
+        notified: list[str] = await read_file("wallets/pi_notified_payments.json")
+        notified.append(payment.hash)
+        await write_file("wallets/pi_notified_payments.json", notified)
 
 
 wallet = Wallet('GC5NAVYCC7GYZO2LRTDJXJZFAWAGTKNHJBX43TN2RBMEOAUN37FMSEZD')

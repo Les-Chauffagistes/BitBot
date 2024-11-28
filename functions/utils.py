@@ -2,7 +2,7 @@ import aiofiles
 from typing import Union
 from json import loads, dumps
 from discord import Message, User, Member
-from init import client
+from init import GUILD_ID, MODE, client
 
 async def read_file(name: str) -> Union[str, list, dict[str]]:
     """
@@ -34,3 +34,12 @@ async def fetch(channel_id: int, message_id: int) -> Message:
 
 def is_manager(user: Union[User, Member]) -> bool:
     return not set([role.id for role in user.roles]).isdisjoint([])
+
+def is_seller(user: User | Member) -> bool:
+    guild = client.get_guild(GUILD_ID)
+    if isinstance(user, User):
+        user = guild.get_member(user.id)
+
+    if MODE == "DEV":
+        role = guild.get_role(1310271119466565755)
+        return role in user.roles

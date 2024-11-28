@@ -1,11 +1,14 @@
+import os
+import traceback
 from typing import Literal, Optional
-from discord import ButtonStyle, Embed, Interaction
-
+from discord import ButtonStyle, Embed, File, Interaction, SelectOption, User
+from classes.commands import Command
 from classes.discord_wallet import PiWallet
 from classes.emoji import Emoji
 from classes.item import Item
-from init import COLOR, MODE
-from discord.ui import View, Button
+from functions.utils import read_file
+from init import COLOR, GUILD_ID, MODE, log, client
+from discord.ui import View, Button, Select
 
 
 async def wallet_creation_view(interaction: Interaction, user_wallet: Optional[PiWallet], role: Literal['vendeur', 'acheteur']):
@@ -91,11 +94,13 @@ async def wallet_payment_view(interaction: Interaction, user_wallet: Optional[Pi
             ephemeral = True
         )
 
-async def item_edit(interaction: Interaction, item: Optional[Item] = None):
+async def item_edit(interaction: Interaction, item: Optional[Item] = None, with_back: bool = False):
     embed = Embed(
         title = "Gérer le produit",
         description = f"# {item.name}\n{item.description}\n### **{item.price}** Pi",
         color = COLOR
+    ).set_image(
+        url = "attachment://image.png"
     )
     view = View(timeout = None).add_item(
         Button(
@@ -106,10 +111,201 @@ async def item_edit(interaction: Interaction, item: Optional[Item] = None):
         )
     ).add_item(
         Button(
-            label = "Ajouter une image",
+            label = "Définir l'image",
             emoji = Emoji.image.value,
             style = ButtonStyle.primary,
             custom_id = f"ADDITEMIMAGE#{item.id}"
+        )
+    )
+    if await item.message:
+        view.add_item(
+            Button(
+                label = "Supprimer le produit",
+                emoji = Emoji.delete.value,
+                style = ButtonStyle.danger,
+                custom_id = f"DELETEITEM#{item.id}"
+            )
+        )
+    
+    else:
+        view.add_item(
+            Button(
+                label = "Publier",
+                emoji = Emoji.share.value,
+                style = ButtonStyle.green,
+                custom_id = f"PUBLISHITEM#{item.id}"
+            ) 
+        )
+    
+    view.add_item(
+        Select(
+            placeholder = "Méthode de paiement",
+            custom_id = f"SETPAYMENTMETHOD#{item.id}",
+            options = [
+                SelectOption(
+                    label = "Paiement OnChain",
+                    description = "Via mainnet",
+                    value = "onchain",
+                    default = item.payment_method == "onchain"
+                ),
+                SelectOption(
+                    label = "Paiement Discord",
+                    description = "Via Discord",
+                    value = "discord",
+                    default = item.payment_method == "discord"
+                ),
+                SelectOption(
+                    label = "Peu importe",
+                    description = "Laissez l'acheteur choisir",
+                    value = "any",
+                    default = item.payment_method == "any"
+                )
+            ]
+        )
+    ).add_item(
+        Select(
+            placeholder = "Frais de ports",
+            custom_id = f"SETFEES#{item.id}",
+            options = [
+                SelectOption(
+                    label = "Frais inclus dans le prix",
+                    description = "Le prix comprend les frais de ports",
+                    value = "included",
+                    default = item.fees == "included"
+                ),
+                SelectOption(
+                    label = "Frais non inclus",
+                    description = "L'acheteur paie les frais de ports en Euro",
+                    value = "euro",
+                    default = item.fees == "euro"
+                ),
+                SelectOption(
+                    label = "Non applicable",
+                    description = "Le produit est dématérialisé",
+                    value = "none",
+                    default = item.fees == None
+                )
+            ]
+        )
+    )
+    if with_back:
+        view.add_item(
+            Button(
+                label = "Retour",
+                emoji = Emoji.back.value,
+                custom_id = "BACKITEM",
+                row = 3
+            )
+        )
+
+    return embed, view, File(f"data/business/images/{item.id}.png", "image.png") if os.path.exists(f"data/business/images/{item.id}.png") else None
+
+async def main_edit_view(user: User):
+    sales: list[Item] = []
+    for file_name in os.listdir("data/business/sales"):
+        try:
+            file_data = await read_file(f"business/sales/{file_name}")
+            if file_data['seller_id'] == user.id:
+                sales.append(await Item.from_id(file_data["id"]))
+        
+        except:
+            log.warn(traceback.format_exc())
+            continue
+
+    if sales:
+        embed = Embed(
+            title = 'Mes produits',
+            description = "Voici la liste des articles que vous avez créés. Sélectionnez un article pour le modifier ou le publier",
+            color = COLOR
+        )
+        view = View(timeout = None).add_item(
+            Select(
+                placeholder = "Choisir un article",
+                options = [
+                    SelectOption(
+                        label = item.name,
+                        description = f"{item.price} π ・ {item.description[:30]}...",
+                        value = item.id,
+                        emoji = Emoji.lock.value if not await item.message else Emoji.world.value
+                    )
+                    for item in sales
+                ],
+                custom_id = f"SELECTITEM"
+            )
+        )
+    
+    else:
+        embed = Embed(
+            title = "Mes produits",
+            description = f"Vous n'avez encore créé aucun article. Utilisez la commande {Command.ventes_add} pour créer un article.",
+            color = COLOR
+        )
+        view = View()
+    
+    return embed, view
+
+async def item_card_view(item: Item):
+    guild = client.get_guild(GUILD_ID)
+    embed = Embed(
+        title = "À vendre",
+        description = f"""# {item.name}\n{item.description}\n\n### **{item.price} π**""",
+        color = COLOR
+    ).set_author(
+        name = guild.get_member(item.seller_id).display_name,
+        icon_url = guild.get_member(item.seller_id).display_avatar.url
+    ).set_footer(
+        text = f"{'Frais de ports inclus' if item.fees == "included" else "Frais de ports à régler en Euro"} ・ {'Paiment OnChain' if item.payment_method == "onchain" else 'Paiement Discord' if item.payment_method == "discord" else "Paiement OnChain ou Discord"}"
+    ).set_image(
+        url = "attachment://image.png"
+    )
+    view = View(timeout=None).add_item(
+        Button(
+            label = "Acheter",
+            emoji = Emoji.shop_bag.value,
+            style = ButtonStyle.green,
+            custom_id = f"BUYITEM#{item.id}"
+        )
+    )
+    return embed, view, File(f"data/business/images/{item.id}.png", "image.png") if os.path.exists(f"data/business/images/{item.id}.png") else None
+
+def discord_pre_payout(item: Item):
+    embed = Embed(
+        title = "Confirmer l'achat ?",
+        description = f"Vous allez utiliser le solde de votre wallet Discord pour acheter {item.name} à {item.price} π.",
+        color = COLOR
+    )
+    view = View(timeout = None).add_item(
+        Button(
+            label = "Annuler",
+            custom_id = "DESTROY",
+        )
+    ).add_item(
+        Button(
+            label = "Confirmer",
+            custom_id = f"CONFIRMBUY#discord#{item.id}",
+            style = ButtonStyle.green,
+            emoji = Emoji.shop_bag.value
+        )
+    )
+    return embed, view
+
+def onchain_pre_payout(item: Item):
+    embed = Embed(
+        title = "Confirmer l'achat ?",
+        description = f"Vous allez utiliser la blockchain pour acheter {item.name} à {item.price} π.\nLorsque vous aurez confirmé, {client.user.display_name} préviendra {item.seller.display_name} de votre réservation. Il ne vous restera plus qu'à effectuer une transaction de {item.price} π vers le wallet de {item.seller.display_name}.",
+        color = COLOR
+    )
+    view = View(timeout = None).add_item(
+        Button(
+            label = "Annuler",
+            custom_id = "DESTROY",
+        )
+    ).add_item(
+        Button(
+            label = "Confirmer",
+            custom_id = f"CONFIRMBUY#onchain#{item.id}",
+            style = ButtonStyle.green,
+            emoji = Emoji.shop_bag.value
         )
     )
     return embed, view

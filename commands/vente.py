@@ -1,9 +1,10 @@
 import traceback
-from discord import Interaction, TextStyle
+from discord import Embed, Interaction, TextStyle
 from discord.app_commands import Group, AppCommandContext
 from discord.ui import Modal, TextInput
 from classes.item import Item
-from views.community_business import item_edit
+from functions.utils import is_seller
+from views.community_business import item_edit, main_edit_view
 from init import log
 class CustomGroup(Group):
     pass
@@ -48,17 +49,36 @@ async def addCommand(interaction: Interaction):
                 interaction2.user.id,
                 None,
                 None,
-                None
+                None,
+                'any',
+                'euro'
             )
             await item.save()
-            embed, view = await item_edit(interaction2, item)
+            embed, view, file = await item_edit(interaction2, item)
             await interaction2.response.send_message(
                 embed = embed,
-                view = view
+                view = view,
+                file = file,
             )
 
         modal.on_submit = on_product_update
         await interaction.response.send_modal(modal)
+
+    except:
+        log.warn(traceback.format_exc())
+
+@ventes.command(
+    name = "edit",
+    description = "Modifier un produit de vente"
+)
+async def editCommand(interaction: Interaction):
+    try:
+        if is_seller(interaction.user):
+            embed, view = await main_edit_view(interaction.user)
+            await interaction.response.send_message(
+                embed = embed,
+                view = view
+            )
 
     except:
         log.warn(traceback.format_exc())
