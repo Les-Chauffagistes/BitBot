@@ -5,7 +5,7 @@ from discord import ButtonStyle, Embed, File, Interaction, SelectOption, User
 from classes.commands import Command
 from classes.discord_wallet import PiWallet
 from classes.emoji import Emoji
-from classes.item import Item
+from classes.item import CommunityItem
 from functions.utils import read_file
 from init import COLOR, GUILD_ID, MODE, log, client
 from discord.ui import View, Button, Select
@@ -14,7 +14,7 @@ from discord.ui import View, Button, Select
 async def wallet_creation_view(interaction: Interaction, user_wallet: Optional[PiWallet], role: Literal['vendeur', 'acheteur']):
     if not user_wallet:
         embed = Embed(
-            title = f"Devenir {role} - Étape 1/3",
+            title = f"Devenir {role}",
             description = f"Pour devenir {role}, vous devez disposer d'un wallet Discord, même si vous ne comptez pas l'utiliser. Il permet de vérifier votre adresse Pi Network. Vous ne disposez pas de wallet. Créez-en un en cliquant sur le bouton ci-dessous.",
             color = COLOR
         )
@@ -29,7 +29,7 @@ async def wallet_creation_view(interaction: Interaction, user_wallet: Optional[P
     
     else:
         embed = Embed(
-            title = f"Devenir {role} - Étape 1/3",
+            title = f"Devenir {role}",
             description = f"Pour devenir {role}, vous devez disposer d'un wallet Discord, même si vous ne comptez pas l'utiliser. Il permet de vérifier votre adresse Pi Network. Vous disposez déjà d'un wallet Discord, vous pouvez passer à la prochaine étape !",
             color = COLOR
         )
@@ -45,7 +45,7 @@ async def wallet_creation_view(interaction: Interaction, user_wallet: Optional[P
 async def wallet_verification_view(interaction: Interaction, user_wallet: Optional[PiWallet], role: Literal['vendeur', 'acheteur']):
     if not user_wallet.is_verified:
         embed = Embed(
-            title = f"Devenir {role} - Étape 2/3",
+            title = f"Devenir {role}",
             description = f"Pour devenir {role}, vous devez avoir un profil Pi verifié. Completez votre profil et effectuez l'étape de vérification pour passer à la dernière étape",
             color = COLOR
         )
@@ -71,7 +71,7 @@ async def wallet_payment_view(interaction: Interaction, user_wallet: Optional[Pi
 
     if not role in interaction.user.roles:
         embed = Embed(
-            title = f"Devenir {role} - Étape 3/3",
+            title = f"Devenir {role}",
             description = f"L'inscription en tant que {role} est payante. Déposez au moins {'2' if role == 'acheteur' else '5'} Pi sur votre Wallet Discord, et payez votre inscription pour finaliser votre inscription.",
             color = COLOR
         )
@@ -94,7 +94,7 @@ async def wallet_payment_view(interaction: Interaction, user_wallet: Optional[Pi
             ephemeral = True
         )
 
-async def item_edit(interaction: Interaction, item: Optional[Item] = None, with_back: bool = False):
+async def item_edit(interaction: Interaction, item: CommunityItem = None, with_back: bool = False):
     embed = Embed(
         title = "Gérer le produit",
         description = f"# {item.name}\n{item.description}\n### **{item.price}** Pi",
@@ -104,7 +104,7 @@ async def item_edit(interaction: Interaction, item: Optional[Item] = None, with_
     )
     view = View(timeout = None).add_item(
         Button(
-            label= "Modifier la fiche produit",
+            label= "Modifier",
             emoji = Emoji.edit.value,
             style = ButtonStyle.primary,
             custom_id = f"EDITITEM#{item.id}"
@@ -118,9 +118,26 @@ async def item_edit(interaction: Interaction, item: Optional[Item] = None, with_
         )
     )
     if await item.message:
+        if not item.is_paused:
+            view.add_item(
+                Button(
+                    label = "Suspendre",
+                    emoji = Emoji.pause.value,
+                    custom_id = f"PAUSEITEM#{item.id}"
+                )
+            )
+        
+        else:
+            view.add_item(
+                Button(
+                    label = "Reprendre",
+                    emoji = Emoji.play.value,
+                    custom_id = f"PLAYITEM#{item.id}"
+                )
+            )
         view.add_item(
             Button(
-                label = "Supprimer le produit",
+                label = "Supprimer",
                 emoji = Emoji.delete.value,
                 style = ButtonStyle.danger,
                 custom_id = f"DELETEITEM#{item.id}"
@@ -183,9 +200,28 @@ async def item_edit(interaction: Interaction, item: Optional[Item] = None, with_
                     label = "Non applicable",
                     description = "Le produit est dématérialisé",
                     value = "none",
-                    default = item.fees == None
+                    default = item.fees == "none"
                 )
             ]
+        )
+    ).add_item(
+        Select(
+            placeholder = "Type de vente",
+            options = [
+                SelectOption(
+                    label = "Vente unique",
+                    description = "Votre publication sera retirée lorsqu'un utilisateur achetera votre article",
+                    value = 'unique',
+                    default = item.sell_type == "unique"
+                ),
+                SelectOption(
+                    label = "Vente multiple",
+                    description = "Vendez cet article plusieurs fois. Votre produit restera visible après un achat",
+                    value = 'multi',
+                    default = item.sell_type == "multi"
+                )
+            ],
+            custom_id = f"SELECTITEMSELLTYPE#{item.id}"
         )
     )
     if with_back:
@@ -194,19 +230,19 @@ async def item_edit(interaction: Interaction, item: Optional[Item] = None, with_
                 label = "Retour",
                 emoji = Emoji.back.value,
                 custom_id = "BACKITEM",
-                row = 3
+                row = 4
             )
         )
 
     return embed, view, File(f"data/business/images/{item.id}.png", "image.png") if os.path.exists(f"data/business/images/{item.id}.png") else None
 
 async def main_edit_view(user: User):
-    sales: list[Item] = []
+    sales: list[CommunityItem] = []
     for file_name in os.listdir("data/business/sales"):
         try:
             file_data = await read_file(f"business/sales/{file_name}")
             if file_data['seller_id'] == user.id:
-                sales.append(await Item.from_id(file_data["id"]))
+                sales.append(await CommunityItem.from_id(file_data["id"]))
         
         except:
             log.warn(traceback.format_exc())
@@ -244,7 +280,7 @@ async def main_edit_view(user: User):
     
     return embed, view
 
-async def item_card_view(item: Item):
+async def item_card_view(item: CommunityItem):
     guild = client.get_guild(GUILD_ID)
     embed = Embed(
         title = "À vendre",
@@ -268,7 +304,7 @@ async def item_card_view(item: Item):
     )
     return embed, view, File(f"data/business/images/{item.id}.png", "image.png") if os.path.exists(f"data/business/images/{item.id}.png") else None
 
-def discord_pre_payout(item: Item):
+def discord_pre_payout(item: CommunityItem):
     embed = Embed(
         title = "Confirmer l'achat ?",
         description = f"Vous allez utiliser le solde de votre wallet Discord pour acheter {item.name} à {item.price} π.",
@@ -289,7 +325,7 @@ def discord_pre_payout(item: Item):
     )
     return embed, view
 
-def onchain_pre_payout(item: Item):
+def onchain_pre_payout(item: CommunityItem):
     embed = Embed(
         title = "Confirmer l'achat ?",
         description = f"Vous allez utiliser la blockchain pour acheter {item.name} à {item.price} π.\nLorsque vous aurez confirmé, {client.user.display_name} préviendra {item.seller.display_name} de votre réservation. Il ne vous restera plus qu'à effectuer une transaction de {item.price} π vers le wallet de {item.seller.display_name}.",
@@ -309,3 +345,26 @@ def onchain_pre_payout(item: Item):
         )
     )
     return embed, view
+
+async def delete_view(item: CommunityItem):
+    embed = Embed(
+        title = "Supprimer le produit ?",
+        description = "Voulez-vous vraiment supprimer ce produit ? Cette action est irreversible.",
+        color = COLOR
+    )
+    view = View(timeout = None).add_item(
+        Button(
+            label = "Annuler",
+            custom_id = f"BACKITEMID#{item.id}",
+            emoji = Emoji.back.value
+        )
+    ).add_item(
+        Button(
+            label = "Supprimer",
+            custom_id = f"CONFIRMDELETEITEM#{item.id}",
+            style = ButtonStyle.red,
+            emoji = Emoji.delete.value
+        )
+    )
+    return embed, view
+            

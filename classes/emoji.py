@@ -17,6 +17,10 @@ class Emoji(Enum):
     lock = "<:lock:1310632703330091098>"
     back = "<:back:1310238973565735042>"
     shop_bag = "<:shop_bag:1310906629243539487>"
+    send = "<:send:1317112698563072020>"
+    pause = "<:pause:1324690746183254077>"
+    play = "<:play:1324691102091186187>"
+    done = "<:done:1324792101300600832>"
 
     def __str__(self):
         return self.value

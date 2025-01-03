@@ -6,26 +6,26 @@ import events.on_ready
 import events.on_message
 
 async def main():
-    log.info("Démarrage du serveur...")
+    log.info("Starting web server...")
     app.add_routes(routes)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', PORT)
     await site.start()
-    log.info(f'Serveur interne en ligne sur localhost:{PORT}')
-    log.info("Connexion à Discord...")
+    log.info(f'Internal web server online on localhost:{PORT}')
+    log.info("Connecting to Discord Gateaway...")
     await client.login(token)
-    log.info("Connecté")
+    log.info("Connected")
     await client.connect()
 
 async def clear():
     events.on_ready.stop_tasks()
     await client.close()
     client.clear()
-    log.debug("Déconnecté  ")
+    log.debug("Disconnected  ")
 
 if __name__ == '__main__':
-    log.info("Création de la boucle asyncio...")
+    log.info("Creating an asyncio event loop...")
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:

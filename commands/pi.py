@@ -177,13 +177,59 @@ async def sendCommand(interaction: Interaction, montant: Range[int, 1, 10_000], 
     description = "Déposer des pis sur Discord"
 )
 async def depositCommand(interaction: Interaction, montant: Range[int, 1, 10_000]):
-    user_wallet = await PiWallet.from_user(interaction.user.id)
-    if not user_wallet:
-        user_wallet = await PiWallet.create_new(interaction.user)
-    
-    embed = await user_wallet.start_deposit(montant)
+    try:
+        user_wallet = await PiWallet.from_user(interaction.user.id)
+        if not user_wallet:
+            user_wallet = await PiWallet.create_new(interaction.user)
+        
+        embed = await user_wallet.start_deposit(montant)
 
-    await interaction.response.send_message(
-        embed = embed,
-        ephemeral = True
-    )
+        await interaction.response.send_message(
+            embed = embed,
+            ephemeral = True
+        )
+
+    except:
+        log.warn(traceback.format_exc())
+
+@pi.command(
+    name = "withdraw",
+    description = "Retirer des Pi sur Discord"
+)
+async def withdrawCommand(interaction: Interaction, montant: Range[int, 1, 10_000]):
+    try:
+        user_wallet = await PiWallet.from_user(interaction.user.id)
+        if not user_wallet:
+            await interaction.response.send_message(
+                embed = Embed(
+                    title = "Retrait impossible",
+                    description = "Un wallet avec des fonds est requis pour retirer des π",
+                    color = COLOR
+                ),
+                ephemeral = True
+            )
+        
+        else:
+    
+            try:
+                await user_wallet.start_withdrawal(montant)
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Votre demande de retrait a été soumise",
+                        description = f"Les retraits sont traités manuellement, vous recevrez un message lorsque votre retrait sera traité. Les fonds seront déplacés vers votre wallet ```{user_wallet.address}```",
+                        color = COLOR
+                    )
+                )
+            
+            except:
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Fonds insuffisants",
+                        description = f"Votre solde est de {round(user_wallet.balance)} π, vous ne pouvez pas retirer {montant} π",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
+
+    except:
+        log.warn(traceback.format_exc())

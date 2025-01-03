@@ -35,6 +35,7 @@ Envoyez **EXACTEMENT** {profile.validation_amount} Pi à l'adresse suivante :
 
 async def deposit_view(wallet: 'PiWallet', deposit_amount: float):
     wallet.validation_amount = deposit_amount
+    wallet.reason = "deposit"
     await wallet.save()
     embed = Embed(
         title = "Déposer des Pi",
@@ -48,7 +49,7 @@ async def wallet_view(wallet: 'PiWallet', network: Literal["Mainnet", "Testnet",
         case "Discord":
             embed = Embed(
                 title = f"Wallet Pi Network - {network}",
-                description = f"# {wallet.balance} π",
+                description = f"# {round(wallet.balance)} π",
                 color = COLOR
             )
         
@@ -91,3 +92,19 @@ async def wallet_view(wallet: 'PiWallet', network: Literal["Mainnet", "Testnet",
         url = "attachment://wallet.png"
     )
     return embed, File('assets/pi_wallet1.png', 'wallet.png')
+
+async def pay_seller(wallet: 'PiWallet', deposit_amount: float):
+    embed = Embed(
+        title = "Payer l'inscription de vendeur",
+        description = f"S'inscrire en tant que vendeur et bénéficier de tous les outils de vente du serveur coute 5 Pi. Pour payer, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
+        color = COLOR
+    )
+    return embed
+
+async def pay_buyer(walelt: 'PiWallet', deposit_amount: float):
+    embed = Embed(
+        title = "Payer l'inscription d'acheteur",
+        description = f"S'inscrire en tant qu'acheteur et acheter des produits sans frais sur le serveur coute 2 Pi. Pour payer, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
+        color = COLOR
+    )
+    return embed

@@ -10,32 +10,84 @@ from classes.commands import Command
 from classes.discord_wallet import PiWallet
 from discord.ui import View, Modal, TextInput, Button, Select
 from classes.emoji import Emoji
-from classes.item import Item
-from functions.utils import write_file
+from classes.item import CommunityItem
+from functions.utils import create_user_signin_channel, read_file, write_file
 from init import COLOR, MODE, log, client
 from responses import default
-from views.community_business import discord_pre_payout, item_card_view, item_edit, main_edit_view, onchain_pre_payout, wallet_creation_view, wallet_payment_view
+from views.community_business import delete_view, discord_pre_payout, item_card_view, item_edit, main_edit_view, onchain_pre_payout, wallet_creation_view, wallet_payment_view
 import asyncio
+
+log.info("Community interaction bus registered")
 
 async def interact(interaction: Interaction, id: str, values: list[str]):
     user_wallet = await PiWallet.from_user(interaction.user.id)
     components = id.split("#")
     match components[0]:
         case "BECOME_BUYER":
-            embed, view = await wallet_creation_view(interaction, user_wallet, 'acheteur')
-            await interaction.response.send_message(
-                embed = embed,
-                view = view,
-                ephemeral = True
-            )
+            channel, message = await create_user_signin_channel(interaction.user, 'acheteur')
+            if not message:
+                embed, view = await wallet_creation_view(interaction, user_wallet, 'acheteur')
+                message = await channel.send(
+                    embed = embed,
+                    view = view
+                )
+                data: dict[str, int] = await read_file("business/signin_channels.json")
+                data[str(interaction.user.id)] = {
+                    "channel_id": channel.id,
+                    "message_id": message.id,
+                }
+                await write_file("business/signin_channels.json", data)
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Votre salon d'inscription a été créé",
+                        description = f"Rendez-vous sur votre salon privé {channel.mention} pour compléter les étapes de votre inscription en tant qu'acheteur.",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
+        
+            else:
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Voici votre salon d'inscription",
+                        description = f"Rendez-vous sur votre salon privé {channel.mention} pour compléter les étapes de votre inscription en tant qu'acheteur.",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
         
         case "BECOME_SELLER":
-            embed, view = await wallet_creation_view(interaction, user_wallet, 'vendeur')
-            await interaction.response.send_message(
-                embed = embed,
-                view = view,
-                ephemeral = True
-            )
+            channel, message = await create_user_signin_channel(interaction.user, 'vendeur')
+            if not message:
+                embed, view = await wallet_creation_view(interaction, user_wallet, 'vendeur')
+                message = await channel.send(
+                    embed = embed,
+                    view = view
+                )
+                data: dict[str, int] = await read_file("business/signin_channels.json")
+                data[str(interaction.user.id)] = {
+                    "channel_id": channel.id,
+                    "message_id": message.id,
+                }
+                await write_file("business/signin_channels.json", data)
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Votre salon d'inscription a été créé",
+                        description = f"Rendez-vous sur votre salon privé {channel.mention} pour compléter les étapes de votre inscription en tant que vendeur.",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
+        
+            else:
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Voici votre salon d'inscription",
+                        description = f"Rendez-vous sur votre salon privé {channel.mention} pour compléter les étapes de votre inscription en tant que vendeur.",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
         
         case "CREATESILENTWALLET" | "UPDATE_PROFILE":
             wallet = await PiWallet.from_user(interaction.user.id)
@@ -45,7 +97,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             try:
                 wallet = await PiWallet.from_user(interaction.user.id)
                 modal = Modal(
-                    title = "Confirmer votre profil"
+                    title = "Créer votre profil"
                 )
                 raw_address = TextInput(
                     label = "Adresse de votre wallet Pi Network",
@@ -65,39 +117,24 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 modal.add_item(raw_address).add_item(raw_locale)
                 async def on_profile_update(interaction2: Interaction):
                     try:
+                        role: Literal['acheteur', 'vendeur'] = components[1]
                         wallet.locale = raw_locale.value.strip()
                         if wallet.address != raw_address.value.strip() or not wallet.is_verified:
-                            wallet.address = raw_address.value.strip()
                             await wallet.unverify()
-                            embed, view = await wallet.start_validation()
-                            embed.title = f"Devenir {components[1]} - Étape 2/3"
-                            await interaction2.response.edit_message(
-                                embed = embed,
-                                view = view,
-                            )
-                            while True:
-                                await sleep(1)
-                                if (await PiWallet.from_user(interaction2.user.id)).is_verified:
-                                    break
-                                
-                                else:
-                                    log.debug('no')
-                            
-                            log.info('Verified')
-                            embed, view = await wallet_payment_view(interaction2, user_wallet, components[1])
-                            await interaction2.edit_original_response(
-                                embed = embed,
-                                view = view
-                            )
+                            wallet.address = raw_address.value.strip()
+
+                        if role == "acheteur":
+                            embed = await wallet.become_buyer()
                         
                         else:
-                            await wallet.save()
-                            embed, view = await wallet_payment_view(interaction2, user_wallet, components[1])
-                            await interaction2.response.edit_message(
-                                embed = embed,
-                                view = view
-                            )
-                                
+                            embed = await wallet.become_seller()
+
+                        await interaction2.response.edit_message(
+                            embed = embed,
+                            view = View()
+                        )
+                        
+
                     except:
                         log.warn(traceback.format_exc())
 
@@ -107,60 +144,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             except:
                 log.warn(traceback.format_exc())
         
-        case "PAY_INSCRIPTION":
-            role: Literal['acheteur', 'vendeur'] = components[1]
-            if interaction.user.id == int(components[-1]):
-                if MODE == "DEV":
-                    role_buyer = interaction.guild.get_role(1310271143168573450)
-                    role_seller = interaction.guild.get_role(1310271119466565755)
-                
-                else:
-                    pass
-                
-                if role == 'acheteur':
-                    discord_role = role_buyer
-                
-                else:
-                    discord_role = (role_seller, role_buyer)
-
-                if discord_role in interaction.user.roles:
-                    await interaction.response.edit_message(
-                        embed = Embed(
-                            title = "Inscription déjà validée",
-                            description = f"Vous disposez déjà des privilèges liés au rôle {role}.",
-                            color = COLOR
-                        ),
-                        view = View()
-                    )
-                
-                else:
-                    try:
-                        await user_wallet.remove_pi(2 if role == 'acheteur' else 5)
-                    
-                    except:
-                        await interaction.response.send_message(
-                            embed = Embed(
-                                title = "Fonds insuffisants",
-                                description = f"Utilisez la commande {Command.pi_deposit} pour déposer des Pi sur votre wallet.",
-                                color = COLOR
-                            ),
-                            ephemeral = True
-                        )
-                        return
-                    
-                    await interaction.user.add_roles(*discord_role)
-                    await interaction.response.edit_message(
-                        embed = Embed(
-                            title = "Inscription validée",
-                            description = f"Vous avez obtenu tous les privilèges liés au rôle {role}.",
-                            color = COLOR
-                        ),
-                        view = View()
-                    )
-                            
         case "EDITITEM":
             product_id = int(components[-1])
-            item = await Item.from_id(product_id)
+            item = await CommunityItem.from_id(product_id)
             modal = Modal(title = "Fiche produit")
             raw_name = TextInput(
                 label = "Nom du produit",
@@ -181,7 +167,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             modal.add_item(raw_name).add_item(raw_description).add_item(raw_price)
             async def on_product_update(interaction2: Interaction):
                 try:
-                    item = await Item.from_id(product_id)
+                    item = await CommunityItem.from_id(product_id)
                     item.name = raw_name.value.strip()
                     item.price = int(raw_price.value.strip())
                     item.description = raw_description.value.strip()
@@ -207,7 +193,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
         
         case "ADDITEMIMAGE":
             product_id = int(components[-1])
-            item = await Item.from_id(product_id)
+            item = await CommunityItem.from_id(product_id)
             await interaction.response.edit_message(
                 embed = Embed(
                     title = "Ajout d'une image",
@@ -252,7 +238,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 if isinstance(result, Interaction):
                     interaction2 = result
                     log.debug('Annulation')
-                    embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 4)
+                    embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 5)
                     await interaction2.response.edit_message(
                         embed = embed,
                         view = view,
@@ -269,7 +255,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                             view = view,
                             attachments = [file] if file else []
                         )
-                    embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 4)
+                    embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 5)
                     await interaction.edit_original_response(
                         embed = embed,
                         view = view,
@@ -278,7 +264,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             
         case "PUBLISHITEM":
             item_id = int(components[-1])
-            item = await Item.from_id(item_id)
+            item = await CommunityItem.from_id(item_id)
             if not await item.message:
                 if MODE == "DEV":
                     channel = client.get_channel(1310526655101407232)
@@ -297,12 +283,13 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                         title = "Votre produit a été publié !",
                         description = f"{client.user.display_name} vous enverra un MP lorsque quelqu'un achètera votre produit",
                         color = COLOR
-                    )
+                    ),
+                    attachments = []
                 )
 
         case "SELECTITEM":
             item_id = int(values[0])
-            item = await Item.from_id(item_id)
+            item = await CommunityItem.from_id(item_id)
             embed, view, file = await item_edit(interaction, item, True)
             await interaction.response.edit_message(
                 embed = embed,
@@ -320,7 +307,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
         
         case "SETPAYMENTMETHOD":
             item_id = int(components[-1])
-            item = await Item.from_id(item_id)
+            item = await CommunityItem.from_id(item_id)
             method: Literal['onchain', 'discord', 'any'] = values[0]
             item.payment_method = method
             await item.save()
@@ -331,7 +318,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                     view = view,
                     attachments = [file] if file else []
                 )
-            embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 4)
+            embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 5)
             await interaction.response.edit_message(
                 embed = embed,
                 view = view,
@@ -340,7 +327,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             
         case "SETFEES":
             item_id = int(components[-1])
-            item = await Item.from_id(item_id)
+            item = await CommunityItem.from_id(item_id)
             fees: Literal["included", "euro", "none"] = values[0]
             item.fees = fees
             await item.save()
@@ -351,7 +338,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                     view = view,
                     attachments = [file] if file else []
                 )
-            embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 4)
+            embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 5)
             await interaction.response.edit_message(
                 embed = embed,
                 view = view,
@@ -360,10 +347,25 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
         
         case "DELETEITEM":
             item_id = int(components[-1])
-            item = await Item.from_id(item_id)
+            item = await CommunityItem.from_id(item_id)
+            embed, view = await delete_view(item)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view,
+                attachments = []
+            )
+        
+        case "CONFIRMDELETEITEM":
+            item_id = int(components[-1])
+            item = await CommunityItem.from_id(item_id)
             await (await item.message).delete()
             os.remove(f"data/business/sales/{item_id}.json")
-            os.remove(f'data/business/images/{item_id}.png')
+            try:
+                os.remove(f'data/business/images/{item_id}.png')
+            
+            except:
+                pass
+            
             embed, view = await main_edit_view(interaction.user)
             await interaction.response.edit_message(
                 embed = embed,
@@ -377,54 +379,65 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
 
         case "BUYITEM":
             item_id = int(components[-1])
-            item = await Item.from_id(item_id)
-            if item.payment_method == "any":
+            item = await CommunityItem.from_id(item_id)
+            if item:
+                if item.payment_method == "any":
+                    await interaction.response.send_message(
+                        embed = Embed(
+                            title = "Choisir une méthode de paiement",
+                            description = "Vous pous pouvez payer via votre wallet Discord ou votre wallet Mainnet pour acheter cet article.\nQuelle méthode souhaitez vous utiliser pour cet achat ?",
+                            color = COLOR
+                        ),
+                        view = View(timeout = None).add_item(
+                            Select(
+                                placeholder = "Méthode de paiement",
+                                custom_id = f"PAYWITH#{item.id}",
+                                options = [
+                                    SelectOption(
+                                        label = "Wallet Discord",
+                                        value = "discord",
+                                        description = "Utilisez le solde de votre wallet Discord pour payer instantanément"
+                                    ),
+                                    SelectOption(
+                                        label = "OnChain",
+                                        value = "onchain",
+                                        description = "Utilisez la blockchain pour votre paiement"
+                                    )
+                                ]
+                            )
+                        ),
+                        ephemeral = True
+                    )
+                
+                elif item.payment_method == "discord":
+                    embed, view = discord_pre_payout(item)
+                    await interaction.response.send_message(
+                        embed = embed,
+                        view = view,
+                        ephemeral = True
+                    )
+                
+                elif item.payment_method == "onchain":
+                    embed, view = onchain_pre_payout(item)
+                    await interaction.response.send_message(
+                        embed = embed,
+                        view = view,
+                        ephemeral = True
+                    )
+            
+            else:
                 await interaction.response.send_message(
                     embed = Embed(
-                        title = "Choisir une méthode de paiement",
-                        description = "Vous pous pouvez payer via votre wallet Discord ou votre wallet Mainnet pour acheter cet article.\nQuelle méthode souhaitez vous utiliser pour cet achat ?",
+                        title = "Achat impossible",
+                        description = "Cet article n'existe plus.",
                         color = COLOR
                     ),
-                    view = View(timeout = None).add_item(
-                        Select(
-                            placeholder = "Méthode de paiement",
-                            custom_id = f"PAYWITH#{item.id}",
-                            options = [
-                                SelectOption(
-                                    label = "Wallet Discord",
-                                    value = "discord",
-                                    description = "Utilisez le solde de votre wallet Discord pour payer instantanément"
-                                ),
-                                SelectOption(
-                                    label = "OnChain",
-                                    value = "onchain",
-                                    description = "Utilisez la blockchain pour votre paiement"
-                                )
-                            ]
-                        )
-                    ),
-                    ephemeral = True
-                )
-            
-            elif item.payment_method == "discord":
-                embed, view = discord_pre_payout(item)
-                await interaction.response.send_message(
-                    embed = embed,
-                    view = view,
-                    ephemeral = True
-                )
-            
-            elif item.payment_method == "onchain":
-                embed, view = onchain_pre_payout(item)
-                await interaction.response.send_message(
-                    embed = embed,
-                    view = view,
                     ephemeral = True
                 )
         
         case "PAYWITH":
             item_id = int(components[-1])
-            item = await Item.from_id(item_id)
+            item = await CommunityItem.from_id(item_id)
             method: Literal["discord", "onchain"] = values[0]
             if method == "discord":
                 embed, view = discord_pre_payout(item)
@@ -439,7 +452,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
         
         case "CONFIRMBUY":
             item_id = int(components[-1])
-            item = await Item.from_id(item_id)
+            item = await CommunityItem.from_id(item_id)
             selected_method: Literal["discord", "onchain"] = components[1]
             if selected_method == "discord":
                 wallet = await PiWallet.from_user(interaction.user.id)
@@ -463,9 +476,12 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                             new_bt.label = button.label
                             new_bt.emoji = button.emoji
                             new_bt.custom_id = button.custom_id
-                            if MODE == "PROD":
+                            if item.sell_type == "unique":
+                                new_bt.style = ButtonStyle.gray
                                 new_bt.disabled = True
-                            new_bt.style = ButtonStyle.gray
+                            
+                            else:
+                                new_bt.style = ButtonStyle.green
                             
                             await (await item.message).edit(
                                 view = View(timeout = None).add_item(new_bt)
@@ -531,3 +547,90 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                         color = COLOR
                     )
                 )
+            
+        case "SELECTITEMSELLTYPE":
+            item_id = int(id.split("#")[1])
+            item = await CommunityItem.from_id(item_id)
+            sell_type: Literal["unique", "multi"] = values[0]
+            item.sell_type = sell_type
+            await item.save()
+            embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 5)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view,
+                attachments = [file] if file else []
+            )
+        
+        case "PAUSEITEM":
+            item_id = int(id.split("#")[1])
+            item = await CommunityItem.from_id(item_id)
+            message = await item.message
+            if message:
+                item.is_paused = True
+                await item.save()
+                embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 5)
+                await interaction.response.edit_message(
+                    embed = embed,
+                    view = view,
+                    attachments = [file] if file else []
+                )
+                button = message.components[0].children[0]
+                new_button = Button()
+                new_button.label = button.label
+                new_button.emoji = button.emoji
+                new_button.custom_id = button.custom_id
+                new_button.disabled = True
+                new_button.style = ButtonStyle.gray
+                await message.edit(view = View(timeout = None).add_item(new_button))
+            
+            else:
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Votre produit n'est plus en ligne",
+                        description = "Vous ne pouvez pas suspendre une annonce qui n'a pas encore été publiée.",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
+        
+        case "PLAYITEM":
+            item_id = int(id.split("#")[1])
+            item = await CommunityItem.from_id(item_id)
+            message = await item.message
+            if message:
+                item.is_paused = False
+                await item.save()
+                button = message.components[0].children[0]
+                new_button = Button()
+                new_button.label = button.label
+                new_button.emoji = button.emoji
+                new_button.custom_id = button.custom_id
+                new_button.disabled = False
+                new_button.style = ButtonStyle.green
+                await message.edit(view = View(timeout = None).add_item(new_button))
+                embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 5)
+                await interaction.response.edit_message(
+                    embed = embed,
+                    view = view,
+                    attachments = [file] if file else []
+                )
+            
+            else:
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Votre produit n'est plus en ligne",
+                        description = "Vous ne pouvez pas relancer une annonce qui n'est plus en ligne. Publiez là à nouveau pour reprendre les ventes",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
+        
+        case "BACKITEMID":
+            item_id = int(id.split("#")[1])
+            item = await CommunityItem.from_id(item_id)
+            embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 5)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view,
+                attachments = [file] if file else []
+            )

@@ -7,10 +7,14 @@ from asyncio import gather
 import commands.commands
 import commands.pi
 import commands.pi_profile
+import commands.business
 from discord.ui import View, Button
+
+log.info("Registered on_ready")
 
 async def stop_task():
     global tasks
+    log.warn("Stopping tasks...")
     for task in tasks:
         try:
             task.cancel()
@@ -22,10 +26,11 @@ async def stop_task():
 async def on_ready():
     try:
         global tasks
-        log.info('En ligne')
+        log.info('Ready!')
         commands.pi.pi.add_command(commands.pi_profile.profile)
         tree.add_command(commands.pi.pi)
         tree.add_command(commands.vente.ventes)
+        tree.add_command(commands.business.business)
         inscriptions = await fetch(1310229664244961361, 1310229676383277121)
         await inscriptions.edit(
             embed = Embed(
@@ -64,7 +69,8 @@ Vous recevez tous les privilèges d'acheteur, en plus du droit de créer des enc
         tasks = [
             loop_miner(),
             loop_pi_deposit(),
-            loop_onchain_tx()
+            loop_onchain_tx(),
+            loop_delete_channel()
         ]
         await gather(*tasks)
 

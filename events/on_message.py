@@ -2,6 +2,8 @@ import traceback
 from discord import Message, Embed
 from init import COLOR, client, log
 
+log.info("Registered on_message")
+
 @client.event
 async def on_message(message: Message):
     try:

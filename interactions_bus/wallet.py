@@ -3,7 +3,9 @@ from discord import Embed, Interaction
 from classes.discord_wallet import PiWallet
 from discord.ui import View
 from functions.utils import write_file
-from init import COLOR
+from init import COLOR, log, client
+
+log.info("Wallet interaction bus registered")
 
 async def interact(interaction: Interaction, id: str, values: list[str]):
     user_wallet = await PiWallet.from_user(interaction.user.id)
@@ -48,3 +50,29 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                         ),
                         view = View()
                     )
+
+        case "CONFIRMWITHDRAWAL":
+            user_id = int(id.split('#')[1])
+            amount = int(id.split('#')[2])
+            user_wallet = await PiWallet.from_user(user_id)
+            try:
+                await interaction.guild.get_member(user_id).send(
+                    embed = Embed(
+                        title = "Votre demande de retrait a été traité",
+                        description = f"Vous avez retiré **{amount} π** de votre wallet.",
+                        color = COLOR
+                    )
+                )
+                await interaction.response.edit_message(
+                    view = View()
+                )
+            
+            except:
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "L'envoi du message a échoué",
+                        description = "L'utilisateur n'accepte pas les messages privés du bot.",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
