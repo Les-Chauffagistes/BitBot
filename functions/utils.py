@@ -1,5 +1,5 @@
 import aiofiles
-from typing import TYPE_CHECKING, Literal, Union
+from typing import Literal, Union
 from json import loads, dumps
 from discord import Message, PermissionOverwrite, User, Member
 from init import BUYER_ROLE_ID, GUILD_ID, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY_ID, client
@@ -59,9 +59,9 @@ async def get_user_signin_channel(user: Member) -> tuple[channel.TextChannel, Me
         if channel_id:
             channel = client.get_channel(channel_id)
             if channel:
-                return channel, await client.get_channel(channel_id).fetch_message(message_id)
+                return (channel, await client.get_channel(channel_id).fetch_message(message_id))
             
-            return None, None
+        return None, None
 
     except:
         return None, None

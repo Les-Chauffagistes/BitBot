@@ -12,7 +12,7 @@ from discord.ui import View, Modal, TextInput, Button, Select
 from classes.emoji import Emoji
 from classes.item import CommunityItem
 from functions.utils import create_user_signin_channel, read_file, write_file
-from init import COLOR, MODE, log, client
+from init import COLOR, MODE, SELLER_ROLE_ID, log, client
 from responses import default
 from views.community_business import delete_view, discord_pre_payout, item_card_view, item_edit, main_edit_view, onchain_pre_payout, wallet_creation_view, wallet_payment_view
 import asyncio
@@ -24,6 +24,16 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
     components = id.split("#")
     match components[0]:
         case "BECOME_BUYER":
+            if interaction.guild.get_role(SELLER_ROLE_ID) in interaction.user.roles:
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Vous êtes déjà acheteur",
+                        description = "Vous êtes déjà inscrit en tant qu'acheteur.",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
+                return
             channel, message = await create_user_signin_channel(interaction.user, 'acheteur')
             if not message:
                 embed, view = await wallet_creation_view(interaction, user_wallet, 'acheteur')
@@ -57,6 +67,17 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 )
         
         case "BECOME_SELLER":
+            if interaction.guild.get_role(SELLER_ROLE_ID) in interaction.user.roles:
+                await interaction.response.send_message(
+                    embed = Embed(
+                        title = "Vous êtes déjà vendeur",
+                        description = "Vous êtes déjà inscrit en tant que vendeur.",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
+                return
+            
             channel, message = await create_user_signin_channel(interaction.user, 'vendeur')
             if not message:
                 embed, view = await wallet_creation_view(interaction, user_wallet, 'vendeur')
