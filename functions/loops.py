@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 from socket import timeout
 import traceback
@@ -6,7 +6,7 @@ from discord import ButtonStyle, Embed, File
 from discord.ui import Button, View
 from classes.discord_wallet import PiWallet
 from classes.item import CommunityItem
-from functions.utils import fetch, get_user_signin_channel, mark_as_done, read_file
+from functions.utils import fetch, get_user_signin_channel, mark_as_done, read_file, write_file
 from init import BUYER_ROLE_ID, COLOR, GUILD_ID, MODE, SELLER_ROLE_ID, SERVER_NAME, WALLET_PI_FULCRAN, client, log
 from asyncio import sleep, CancelledError
 from modules.ckpool.api import get_miner_info
@@ -311,17 +311,28 @@ async def loop_delete_channel():
     log.info("Ready")
     while True:
         try:
+            let = {}
             for user_id, channel_data in (await read_file("business/signin_channels.json")).items():
                 status = channel_data.get("done", False)
-                if status:
+                if status: # Expired channel, deleting
                     try:
-                        channel = client.get_channel(channel_data.get("id"))
+                        channel = client.get_channel(channel_data.get("channel_id"))
                         creation_date = utils.snowflake_time(channel.id)
-                        if creation_date - timedelta(minutes = 10) < datetime.now():
+                        log.debug(creation_date + timedelta(minutes = 10), datetime.now(tz=timezone.utc))
+                        if creation_date + timedelta(minutes = 10) < datetime.now(tz=timezone.utc) :
                             await channel.delete(reason = "Inscription terminée")
+                        
+                        else: # Not expired, conserving
+                            let[user_id] = channel_data
                     
                     except:
+                        log.warn("y'a eu un problemo:", traceback.format_exc())
                         continue
+
+                else: # Still active, conserving
+                    let[user_id] = channel_data
+            
+            await write_file("business/signin_channels.json", let)
         
         except CancelledError:
             break
