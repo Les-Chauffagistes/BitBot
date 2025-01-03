@@ -2,7 +2,7 @@ import aiofiles
 from typing import TYPE_CHECKING, Literal, Union
 from json import loads, dumps
 from discord import Message, PermissionOverwrite, User, Member
-from init import BUYER_ROLE_ID, GUILD_ID, MODE, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY_ID, client
+from init import BUYER_ROLE_ID, GUILD_ID, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY_ID, client
 from discord import channel
 from discord.utils import get
 

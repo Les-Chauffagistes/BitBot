@@ -20,6 +20,9 @@ async def loop_miner():
     if MODE == "DEV":
         dashboard = await fetch(1309917142736703622, 1309925491146358794)
 
+    else:
+        dashboard = await fetch(1287747648564105307, 1287747811798024302)
+
     while True:
         try: # Loop instructions
             miners = await get_miner_info()

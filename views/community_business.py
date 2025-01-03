@@ -7,7 +7,7 @@ from classes.discord_wallet import PiWallet
 from classes.emoji import Emoji
 from classes.item import CommunityItem
 from functions.utils import read_file
-from init import COLOR, GUILD_ID, MODE, log, client
+from init import BUYER_ROLE_ID, COLOR, GUILD_ID, SELLER_ROLE_ID, log, client
 from discord.ui import View, Button, Select
 
 
@@ -59,9 +59,8 @@ async def wallet_verification_view(interaction: Interaction, user_wallet: Option
         return embed, view
 
 async def wallet_payment_view(interaction: Interaction, user_wallet: Optional[PiWallet], role: Literal['vendeur', 'acheteur']):
-    if MODE == "DEV":
-        role_buyer = interaction.guild.get_role(1310271143168573450)
-        role_seller = interaction.guild.get_role(1310271119466565755)
+    role_buyer = interaction.guild.get_role(BUYER_ROLE_ID)
+    role_seller = interaction.guild.get_role(SELLER_ROLE_ID)
     
     if role == 'acheteur':
         discord_role = role_buyer
@@ -69,7 +68,7 @@ async def wallet_payment_view(interaction: Interaction, user_wallet: Optional[Pi
     else:
         discord_role = role_seller
 
-    if not role in interaction.user.roles:
+    if not discord_role in interaction.user.roles:
         embed = Embed(
             title = f"Devenir {role}",
             description = f"L'inscription en tant que {role} est payante. Déposez au moins {'2' if role == 'acheteur' else '5'} Pi sur votre Wallet Discord, et payez votre inscription pour finaliser votre inscription.",

@@ -6,7 +6,7 @@ from discord.ui import View, Button, Modal, TextInput
 from classes.commands import Command
 from classes.discord_wallet import PiWallet
 from classes.emoji import Emoji
-from init import COLOR, MODE, log
+from init import COLOR, log
 from views.pi_wallet import wallet_view
 
 class CustomGroup(Group):
