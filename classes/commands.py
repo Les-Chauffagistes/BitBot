@@ -1,7 +1,5 @@
 from enum import Enum
 
-from commands import pi_profile
-
 class Command(Enum):
     
     pi_profile_edit = "</pi profile edit:1309939752388132975>"

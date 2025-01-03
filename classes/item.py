@@ -1,4 +1,3 @@
-from itertools import product
 import os
 from typing import Literal, Optional
 from functions.utils import fetch, read_file, write_file
