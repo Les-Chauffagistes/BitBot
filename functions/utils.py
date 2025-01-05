@@ -35,7 +35,9 @@ async def fetch(channel_id: int, message_id: int) -> Message:
     return await client.get_channel(channel_id).fetch_message(message_id)
 
 def is_manager(user: Union[User, Member]) -> bool:
-    return not set([role.id for role in user.roles]).isdisjoint([])
+    if isinstance(user, User):
+        user = client.get_guild(GUILD_ID).get_member(user.id)
+    return not set([role.id for role in user.roles]).isdisjoint([1313062024200327238])
 
 def is_seller(user: User | Member) -> bool:
     guild = client.get_guild(GUILD_ID)

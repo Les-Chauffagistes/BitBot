@@ -1,6 +1,4 @@
-from gettext import find
 import os
-from tabnanny import check
 from typing import Literal, Optional
 from discord import Embed, User
 from classes.emoji import Emoji

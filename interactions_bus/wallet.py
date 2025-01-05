@@ -1,9 +1,7 @@
-import os
 from discord import Embed, Interaction
 from classes.discord_wallet import PiWallet
 from discord.ui import View
-from functions.utils import write_file
-from init import COLOR, log, client
+from init import COLOR, log
 
 log.info("Wallet interaction bus registered")
 

@@ -55,31 +55,41 @@ async def wallet(interaction: Interaction, network: Literal['Mainnet', 'Testnet'
             
             case "Mainnet" | "Testnet":
                 wallet = await PiWallet.from_user(utilisateur.id if utilisateur else interaction.user.id)
-                if wallet.address:
-                    embed, file = await wallet_view(wallet, network)
-                    await interaction.response.send_message(
-                        embed = embed,
-                        file = file
-                    )
-                
-                else:
-                    if not utilisateur:
+                if wallet:
+                    if wallet.address:
+                        embed, file = await wallet_view(wallet, network)
                         await interaction.response.send_message(
-                            embed = Embed(
-                                title = "Adresse non connue",
-                                description = f"Vous devez saisir votre adresse Pi Network pour que BitBot puisse récupérer votre solde à partir de la blockchain. Utilisez la commande {Command.pi_profile_edit}.",
-                                color = COLOR
-                            )
+                            embed = embed,
+                            file = file
                         )
                     
                     else:
-                        await interaction.response.send_message(
-                            embed = Embed(
-                                title = "Adresse non connue",
-                                description = f"{utilisateur.display_name} n'a pas fourni son adresse Pi Network.",
-                                color = COLOR
+                        if not utilisateur:
+                            await interaction.response.send_message(
+                                embed = Embed(
+                                    title = "Adresse non connue",
+                                    description = f"Vous devez saisir votre adresse Pi Network pour que BitBot puisse récupérer votre solde à partir de la blockchain. Utilisez la commande {Command.pi_profile_edit}.",
+                                    color = COLOR
+                                )
                             )
+                        
+                        else:
+                            await interaction.response.send_message(
+                                embed = Embed(
+                                    title = "Adresse non connue",
+                                    description = f"{utilisateur.display_name} n'a pas fourni son adresse Pi Network.",
+                                    color = COLOR
+                                )
+                            )
+                
+                else:
+                    await interaction.response.send_message(
+                        embed = Embed(
+                            title = "Adresse non connue",
+                            description = f"{utilisateur.display_name} n'a pas fourni son adresse Pi Network.",
+                            color = COLOR
                         )
+                    )
 
     
     except:

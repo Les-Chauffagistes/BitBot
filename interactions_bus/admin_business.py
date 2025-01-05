@@ -1,13 +1,11 @@
 import traceback
 from discord import ButtonStyle, Embed, Interaction
 from discord.utils import MISSING
-from requests import delete
 from classes.discord_wallet import PiWallet
 from classes.emoji import Emoji
 from classes.item import AdminItem
-from modules.pinet.classes import Wallet
 from views.admin_business import confirm_payment_view, item_modal, item_variante_modal, item_variante_view, item_view, preview_item_variant, product_view, select_channel, select_variante_purchase_view
-from init import ADMIN_NOTIFICATIONS_CHANNEL_ID, COLOR, FULCRAN_ID, GUILD_ID, SERVER_NAME, log, client
+from init import ADMIN_NOTIFICATIONS_CHANNEL_ID, COLOR, FULCRAN_ID, SERVER_NAME, log, client
 from discord.ui import View, Button, Modal, TextInput
 
 

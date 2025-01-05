@@ -1,8 +1,6 @@
-from math import e
 import os
-from socket import timeout
 from typing import Optional
-from discord import ButtonStyle, ChannelType, Embed, File, SelectOption, TextStyle
+from discord import ButtonStyle, Embed, File, SelectOption, TextStyle
 from classes.emoji import Emoji
 from classes.item import AdminItem
 from discord.ui import Modal, TextInput, View, Button, Select, TextInput

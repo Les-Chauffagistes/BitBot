@@ -1,20 +1,15 @@
-from cProfile import label
 import os
-from asyncio import Task, sleep
-from socket import timeout
-import time
+from asyncio import Task
 import traceback
 from typing import Literal
 from discord import ButtonStyle, Embed, Interaction, Message, SelectOption, TextStyle
-from classes.commands import Command
 from classes.discord_wallet import PiWallet
 from discord.ui import View, Modal, TextInput, Button, Select
 from classes.emoji import Emoji
 from classes.item import CommunityItem
 from functions.utils import create_user_signin_channel, read_file, write_file
-from init import COLOR, MODE, SELLER_ROLE_ID, log, client
-from responses import default
-from views.community_business import delete_view, discord_pre_payout, item_card_view, item_edit, main_edit_view, onchain_pre_payout, wallet_creation_view, wallet_payment_view
+from init import COLOR, SELL_POST_CHANNEL_ID, SELLER_ROLE_ID, log, client
+from views.community_business import delete_view, discord_pre_payout, item_card_view, item_edit, main_edit_view, onchain_pre_payout, wallet_creation_view
 import asyncio
 
 log.info("Community interaction bus registered")
@@ -287,9 +282,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             item_id = int(components[-1])
             item = await CommunityItem.from_id(item_id)
             if not await item.message:
-                if MODE == "DEV":
-                    channel = client.get_channel(1310526655101407232)
-                
+                channel = client.get_channel(SELL_POST_CHANNEL_ID)
                 embed, view, file = await item_card_view(item)
                 msg = await channel.send(
                     embed = embed,

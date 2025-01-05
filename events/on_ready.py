@@ -1,5 +1,3 @@
-from discord import ButtonStyle
-from classes.emoji import Emoji
 import commands.vente
 from init import *
 from functions.loops import *
@@ -8,7 +6,6 @@ import commands.commands
 import commands.pi
 import commands.pi_profile
 import commands.business
-from discord.ui import View, Button
 
 log.info("Registered on_ready")
 

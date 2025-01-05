@@ -9,7 +9,7 @@ from classes.item import CommunityItem
 from functions.utils import read_file
 from init import BUYER_ROLE_ID, COLOR, GUILD_ID, SELLER_ROLE_ID, log, client
 from discord.ui import View, Button, Select
-
+from views.init import *
 
 async def wallet_creation_view(interaction: Interaction, user_wallet: Optional[PiWallet], role: Literal['vendeur', 'acheteur']):
     if not user_wallet:

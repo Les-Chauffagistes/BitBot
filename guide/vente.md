@@ -1,5 +1,5 @@
-# 📚 Guide : Comment vendre facilement sur Pi Lab's avec BitBot !
-Bienvenue dans Pi Lab's ! Ce guide vous accompagne pas à pas pour mettre en vente vos biens ou services avec BitBot. Que vous soyez débutant ou expérimenté, vendre avec Pi n’a jamais été aussi simple. Suivez ces étapes et commencez dès maintenant à gagner vos premiers Pi !
+# 📚 Guide : Comment vendre facilement sur Pill Lab's avec BitBot !
+Bienvenue dans Pill Lab's ! Ce guide vous accompagne pas à pas pour mettre en vente vos biens ou services avec BitBot. Que vous soyez débutant ou expérimenté, vendre avec Pi n’a jamais été aussi simple. Suivez ces étapes et commencez dès maintenant à gagner vos premiers Pi !
 
 ## 1. Devenir vendeur  
 Si ce n'est pas déjà fait, inscrivez-vous en tant que vendeur. L'inscription ne prend que 2 minutes et est automatique. Consultez <#1310229664244961361> pour démarrer.  
@@ -14,7 +14,7 @@ Retirez temporairement ou définitivement un article à tout moment avec la comm
 - **Supprimer** : Efface complètement l’article.  
 
 ## Méthodes de paiement  
-Pi Lab's propose deux méthodes de paiement pour vos articles :  
+Pill Lab's propose deux méthodes de paiement pour vos articles :  
 1. **Paiement via Discord :**  
 > Transactions rapides et sans frais supplémentaires.  
 > Les utilisateurs peuvent payer directement avec leur wallet Discord.  
