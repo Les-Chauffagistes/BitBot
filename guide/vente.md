@@ -1,9 +1,32 @@
-# Comment mettre en vente un article
-Dans ce guide, vous allez apprendre comment utiliser BitBot pour mettre en vente un bien ou un service dans le serveur Pi Lab's
+# 📚 Guide : Comment vendre facilement sur Pi Lab's avec BitBot !
+Bienvenue dans Pi Lab's ! Ce guide vous accompagne pas à pas pour mettre en vente vos biens ou services avec BitBot. Que vous soyez débutant ou expérimenté, vendre avec Pi n’a jamais été aussi simple. Suivez ces étapes et commencez dès maintenant à gagner vos premiers Pi !
 
-## 1. Devenir vendeur
-Si ce n'est pas déjà fait, vous devez vous inscrire en tant que vendeur. L'inscription ne prend que 2 minutes et est automatique. Consultez <#1310229664244961361> pour démarrer.
-## 2. Aller dans les MP du bot
-Vous allez utiliser BitBot depuis vos messages privés pour créer démarrer. Vous ne pouvez pas utiliser les commandes liées à la vente depuis le serveur, mais uniquement en message privé avec Bit Bot.
-## 3. Créer une fiche produit
-Maintenant que vous êtes prêt(e), vous allez pouvoir commencer à créer la fiche produit de l'article que vous allez mettre en vente. Une bonne fiche produit contient toutes les infos utiles concernant votre produit afin que les membres du serveur comprennent de quoi il s'agit. Utilisez les boutons et les menus pour personnaliser les élements, puis appuyez sur Publier.
+## 1. Devenir vendeur  
+Si ce n'est pas déjà fait, inscrivez-vous en tant que vendeur. L'inscription ne prend que 2 minutes et est automatique. Consultez <#1310229664244961361> pour démarrer.  
+## 2. Créer une fiche produit  
+Pour vendre un produit, créez une fiche produit avec les détails de votre article via la commande `/ventes add`. Utilisez les boutons et menus pour personnaliser votre annonce, puis appuyez sur **Publier**.  
+## 3. Modifier un produit  
+Vous souhaitez modifier un détail (prix, description...) ? Utilisez la commande : `/ventes edit` dans les MP du bot, sélectionnez votre article, et appliquez les modifications nécessaires. Tout changement est automatiquement enregistré.  
+## 4. Suspendre, reprendre ou supprimer un article  
+Retirez temporairement ou définitivement un article à tout moment avec la commande `/ventes edit` :  
+- **Suspendre** : L’article est retiré des ventes temporairement.  
+- **Reprendre** : Remet l’article en vente.  
+- **Supprimer** : Efface complètement l’article.  
+
+## Méthodes de paiement  
+Pi Lab's propose deux méthodes de paiement pour vos articles :  
+1. **Paiement via Discord :**  
+> Transactions rapides et sans frais supplémentaires.  
+> Les utilisateurs peuvent payer directement avec leur wallet Discord.  
+
+2. **Paiement OnChain :**  
+> Effectuez un virement directement vers le wallet du vendeur.  
+> BitBot surveille la blockchain et valide automatiquement les paiements.
+
+Vous pouvez imposer une méthode ou laisser vos clients choisir.  
+
+
+
+## Pour aller plus loin  
+- **Questions ?** Consultez <#SalonSupport>.  
+- **Conseils de vente :** Optimisez vos annonces avec des descriptions détaillées et des photos attractives !
