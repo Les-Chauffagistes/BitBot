@@ -4,3 +4,4 @@ aiohttp
 requests
 asyncio
 python-dotenv
+bs4

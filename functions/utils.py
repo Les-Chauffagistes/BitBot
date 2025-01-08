@@ -1,10 +1,12 @@
 import aiofiles
-from typing import Union
+from typing import Literal, Union
 from json import loads, dumps
-from discord import Message, User, Member
-from init import client
+from discord import Message, PermissionOverwrite, User, Member
+from init import BUYER_ROLE_ID, GUILD_ID, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY_ID, client
+from discord import channel
+from discord.utils import get
 
-async def read_file(name: str) -> Union[str, list, dict[str]]:
+async def read_file(name: str) -> Union[str, list, dict[str, int | str | bool | dict]]:
     """
     Read file in data directory
     """
@@ -33,4 +35,58 @@ async def fetch(channel_id: int, message_id: int) -> Message:
     return await client.get_channel(channel_id).fetch_message(message_id)
 
 def is_manager(user: Union[User, Member]) -> bool:
-    return not set([role.id for role in user.roles]).isdisjoint([])
+    if isinstance(user, User):
+        user = client.get_guild(GUILD_ID).get_member(user.id)
+    return not set([role.id for role in user.roles]).isdisjoint([1313062024200327238])
+
+def is_seller(user: User | Member) -> bool:
+    guild = client.get_guild(GUILD_ID)
+    if isinstance(user, User):
+        user = guild.get_member(user.id)
+
+    return guild.get_role(SELLER_ROLE_ID) in user.roles
+
+def is_buyer(user: User | Member) -> bool:
+    guild = client.get_guild(GUILD_ID)
+    if isinstance(user, User):
+        user = guild.get_member(user.id)
+    
+    return guild.get_role(BUYER_ROLE_ID) in user.roles
+    
+async def get_user_signin_channel(user: Member) -> tuple[channel.TextChannel, Message] | tuple[None, None]:
+    data: dict[str, int] = await read_file("business/signin_channels.json")
+    channel_id = data.get(str(user.id), {}).get("channel_id")
+    message_id = data.get(str(user.id), {}).get("message_id")
+    try:
+        if channel_id:
+            channel = client.get_channel(channel_id)
+            if channel:
+                return (channel, await client.get_channel(channel_id).fetch_message(message_id))
+            
+        return None, None
+
+    except:
+        return None, None
+        
+async def create_user_signin_channel(user: Member, mode: Literal['vendeur', 'acheteur']):
+    current_channel, current_message = await get_user_signin_channel(user)
+    if not current_channel or not current_message:
+        channel = await user.guild.create_text_channel(
+            name = user.display_name,
+            reason = f"Inscription {mode}",
+            category = get(user.guild.categories, id = SIGNIN_TICKET_CATEGORY_ID),
+            overwrites = {
+                user.guild.default_role: PermissionOverwrite(read_messages = False),
+                user: PermissionOverwrite(read_messages = True)
+            },
+            topic = f"Ce salon a été généré pour suivre votre inscription en tant que {mode}. Vous pouvez demander de l'aide ici en cas de besoin",
+        )
+        return channel, None
+
+    else:
+        return current_channel, current_message
+
+async def mark_as_done(user: Member):
+    data = await read_file("business/signin_channels.json")
+    data[str(user.id)]['done'] = True
+    await write_file("business/signin_channels.json", data)
