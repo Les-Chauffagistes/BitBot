@@ -21,6 +21,7 @@ class Emoji(Enum):
     pause = "<:pause:1324690746183254077>"
     play = "<:play:1324691102091186187>"
     done = "<:done:1324792101300600832>"
+    report = "<:report:1326478828914086001>"
 
     def __str__(self):
         return self.value

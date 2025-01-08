@@ -313,13 +313,12 @@ async def loop_delete_channel():
         try:
             let = {}
             for user_id, channel_data in (await read_file("business/signin_channels.json")).items():
-                status = channel_data.get("done", False)
-                if status: # Expired channel, deleting
+                end_date: int = channel_data.get("done", 0)
+                if end_date: # Expired channel, deleting
                     try:
                         channel = client.get_channel(channel_data.get("channel_id"))
-                        creation_date = utils.snowflake_time(channel.id)
-                        log.debug(creation_date + timedelta(minutes = 10), datetime.now(tz=timezone.utc))
-                        if creation_date + timedelta(minutes = 10) < datetime.now(tz=timezone.utc) :
+                        log.debug(datetime.fromtimestamp(end_date) + timedelta(minutes = 10), datetime.now(tz=timezone.utc))
+                        if end_date + timedelta(minutes = 10) < datetime.now(tz=timezone.utc) :
                             await channel.delete(reason = "Inscription terminée")
                         
                         else: # Not expired, conserving
