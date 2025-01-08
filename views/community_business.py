@@ -42,57 +42,6 @@ async def wallet_creation_view(interaction: Interaction, user_wallet: Optional[P
         )
         return embed, view
 
-async def wallet_verification_view(interaction: Interaction, user_wallet: Optional[PiWallet], role: Literal['vendeur', 'acheteur']):
-    if not user_wallet.is_verified:
-        embed = Embed(
-            title = f"Devenir {role}",
-            description = f"Pour devenir {role}, vous devez avoir un profil Pi verifié. Completez votre profil et effectuez l'étape de vérification pour passer à la dernière étape",
-            color = COLOR
-        )
-        view = View(timeout=None).add_item(
-            Button(
-                label = "Mettre à jour mon profil",
-                emoji = Emoji.profile.value,
-                custom_id = f"UPDATE_PROFILE#{role}#{interaction.user.id}"
-            )
-        )
-        return embed, view
-
-async def wallet_payment_view(interaction: Interaction, user_wallet: Optional[PiWallet], role: Literal['vendeur', 'acheteur']):
-    role_buyer = interaction.guild.get_role(BUYER_ROLE_ID)
-    role_seller = interaction.guild.get_role(SELLER_ROLE_ID)
-    
-    if role == 'acheteur':
-        discord_role = role_buyer
-    
-    else:
-        discord_role = role_seller
-
-    if not discord_role in interaction.user.roles:
-        embed = Embed(
-            title = f"Devenir {role}",
-            description = f"L'inscription en tant que {role} est payante. Déposez au moins {'2' if role == 'acheteur' else '5'} Pi sur votre Wallet Discord, et payez votre inscription pour finaliser votre inscription.",
-            color = COLOR
-        )
-        view = View(timeout=None).add_item(
-            Button(
-                label = "Payer l'inscription",
-                emoji = Emoji.pay.value,
-                custom_id = f"PAY_INSCRIPTION#{role}#{interaction.user.id}"
-            )
-        )
-        return embed, view
-    
-    else:
-        await interaction.response.send_message(
-            embed = Embed(
-                title = "Inscription déjà validée",
-                description = f"Vous avez déjà obtenu les privilèges {role}",
-                color = COLOR
-            ),
-            ephemeral = True
-        )
-
 async def item_edit(interaction: Interaction, item: CommunityItem = None, with_back: bool = False):
     embed = Embed(
         title = "Gérer le produit",

@@ -9,7 +9,7 @@ import commands.business
 
 log.info("Registered on_ready")
 
-async def stop_task():
+async def stop_tasks():
     global tasks
     log.warn("Stopping tasks...")
     for task in tasks:

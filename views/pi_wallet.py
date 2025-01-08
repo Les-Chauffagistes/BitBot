@@ -99,12 +99,34 @@ async def pay_seller(wallet: 'PiWallet', deposit_amount: float):
         description = f"S'inscrire en tant que vendeur et bénéficier de tous les outils de vente du serveur coute 5 Pi. Pour payer, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
         color = COLOR
     )
-    return embed
+    view = View(timeout = None).add_item(
+        Button(
+            label = "Obtenir le montant",
+            custom_id = f"PRINT#{deposit_amount}"
+        )
+    ).add_item(
+        Button(
+            label = "Obtenir l'adresse",
+            custom_id = f"PRINT#{WALLET_PI_FULCRAN}"
+        )
+    )
+    return embed, view
 
-async def pay_buyer(walelt: 'PiWallet', deposit_amount: float):
+async def pay_buyer(wallet: 'PiWallet', deposit_amount: float):
     embed = Embed(
         title = "Payer l'inscription d'acheteur",
         description = f"S'inscrire en tant qu'acheteur et acheter des produits sans frais sur le serveur coute 2 Pi. Pour payer, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
         color = COLOR
     )
-    return embed
+    view = View(timeout = None).add_item(
+        Button(
+            label = "Obtenir le montant",
+            custom_id = f"PRINT#{deposit_amount}"
+        )
+    ).add_item(
+        Button(
+            label = "Obtenir l'adresse",
+            custom_id = f"PRINT#{WALLET_PI_FULCRAN}"
+        )
+    )
+    return embed, view

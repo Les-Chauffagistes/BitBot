@@ -140,14 +140,14 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                             wallet.address = raw_address.value.strip()
 
                         if role == "acheteur":
-                            embed = await wallet.become_buyer()
+                            embed, view = await wallet.become_buyer()
                         
                         else:
-                            embed = await wallet.become_seller()
+                            embed, view = await wallet.become_seller()
 
                         await interaction2.response.edit_message(
                             embed = embed,
-                            view = View()
+                            view = view
                         )
                         
 
