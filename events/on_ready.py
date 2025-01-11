@@ -1,3 +1,4 @@
+import commands.badge
 import commands.vente
 from init import *
 from functions.loops import *
@@ -6,6 +7,7 @@ import commands.commands
 import commands.pi
 import commands.pi_profile
 import commands.business
+import commands.context
 
 log.info("Registered on_ready")
 
@@ -28,6 +30,7 @@ async def on_ready():
         tree.add_command(commands.pi.pi)
         tree.add_command(commands.vente.ventes)
         tree.add_command(commands.business.business)
+        tree.add_command(commands.badge.badge)
         if SYNC:
             cmds = await tree.sync()
             log.info(f'{len(cmds)} commandes slash synchronisées')

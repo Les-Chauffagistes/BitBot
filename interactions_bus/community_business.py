@@ -163,6 +163,23 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
         case "EDITITEM":
             product_id = int(components[-1])
             item = await CommunityItem.from_id(product_id)
+            if not item:
+                await interaction.response.edit_message(
+                    embed = Embed(
+                        title = "Produit introuvable",
+                        description = "Ce produit n'existe plus.",
+                        color = COLOR
+                    ),
+                    view = View(timeout = None).add_item(
+                        Button(
+                            label = "Retour",
+                            emoji = Emoji.back.value,
+                            custom_id = "BACKITEM"
+                        )
+                    ),
+                    attachments = []
+                )
+                return
             modal = Modal(title = "Fiche produit")
             raw_name = TextInput(
                 label = "Nom du produit",
@@ -647,4 +664,98 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 embed = embed,
                 view = view,
                 attachments = [file] if file else []
+            )
+        
+        case "ADMINDELETEANDREPORT":
+            item_id = int(id.split("#")[1])
+            item = await CommunityItem.from_id(item_id)
+            user = item.seller_id
+            await (await PiWallet.from_user(user)).untrust()
+            
+            try:
+                os.rename(f"data/business/sales/{item_id}.json", f"data/business/vault/{item_id}.json")
+            except:
+                log.warn(traceback.format_exc())
+            
+            try:
+                await (await item.message).delete()
+            
+            except:
+                log.warn(traceback.format_exc())
+
+            modal = Modal(
+                title = "Signalement"
+            )
+
+            raw_body = TextInput(
+                label = "Raison du signalement",
+                placeholder = "La vente enfreint les règles de la communauté",
+                style = TextStyle.paragraph
+            )
+
+            modal.add_item(raw_body)
+            async def onReport(interaction2: Interaction):
+                try:
+                    try:
+                        await item.seller.send(
+                            embed = Embed(
+                                title = "Votre annonce a été supprimée",
+                                description = f"Votre annonce concernant {item.name} a été supprimée pour non respect des règles de la communauté :\n{raw_body.value.strip()}\n\nNous vous rappelons que le serveur est régit par une [charte de vendeur](https://swakraft.hopto.org/pill-labs/guidelines).",
+                            )
+                        )
+                        await interaction2.response.edit_message(
+                            embed = Embed(
+                                title = "Le signalement a été envoyé",
+                                description = "L'utilisateur a bien reçu le message de signalement.",
+                                color = COLOR
+                            ),
+                            view = View()
+                        )
+                    
+                    except:
+                        await interaction2.response.edit_message(
+                            embed = Embed(
+                                title = "L'annonce a été supprimée",
+                                description = "Impossible d'envoyer le message de signalement à l'utilisateur, car il n'accepte pas les messages du bot. L'annonce a été supprimée.",
+                                color = COLOR
+                            ),
+                            view = View()
+                        )
+                except:
+                    log.warn(traceback.format_exc())
+
+            modal.on_submit = onReport
+            await interaction.response.send_modal(modal)
+        
+        case "ADMINDELETEITEM":
+            item_id = int(id.split("#")[1])
+            item = await CommunityItem.from_id(item_id)
+            if not item:
+                await interaction.response.edit_message(
+                    embed = Embed(
+                        title = "Annonce introuvable",
+                        description = "Elle a peut être été supprimée par le vendeur.",
+                        color = COLOR
+                    ),
+                    view = View()
+                )
+                return
+            
+            try:
+                os.rename(f"data/business/sales/{item_id}.json", f"data/business/vault/{item_id}.json")
+            except:
+                log.warn(traceback.format_exc())
+            
+            try:
+                await (await item.message).delete()
+            
+            except:
+                log.warn(traceback.format_exc())
+            
+            await interaction.response.edit_message(
+                embed = Embed(
+                    title = "Annonce supprimée",
+                    color = COLOR
+                ),
+                view = View()
             )

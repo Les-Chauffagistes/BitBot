@@ -1,3 +1,4 @@
+from datetime import datetime
 import aiofiles
 from typing import Literal, Union
 from json import loads, dumps
@@ -88,5 +89,5 @@ async def create_user_signin_channel(user: Member, mode: Literal['vendeur', 'ach
 
 async def mark_as_done(user: Member):
     data = await read_file("business/signin_channels.json")
-    data[str(user.id)]['done'] = True
+    data[str(user.id)]['done'] = datetime.now().timestamp()
     await write_file("business/signin_channels.json", data)
