@@ -8,6 +8,8 @@ import commands.pi
 import commands.pi_profile
 import commands.business
 import commands.context
+from tools.whois import start_check
+from views.community_business import signin_view
 
 log.info("Registered on_ready")
 
@@ -31,9 +33,14 @@ async def on_ready():
         tree.add_command(commands.vente.ventes)
         tree.add_command(commands.business.business)
         tree.add_command(commands.badge.badge)
+        members = await start_check()
+        log.info(members)
+        
         if SYNC:
             cmds = await tree.sync()
             log.info(f'{len(cmds)} commandes slash synchronisées')
+        
+        embed, view = await signin_view()
         
         tasks = [
             loop_miner(),
