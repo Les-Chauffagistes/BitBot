@@ -1,9 +1,10 @@
 from datetime import datetime
+import os
 import aiofiles
 from typing import Literal, Union
 from json import loads, dumps
 from discord import Message, PermissionOverwrite, User, Member
-from init import BUYER_ROLE_ID, GUILD_ID, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY_ID, client
+from init import BUYER_ROLE_ID, GUILD_ID, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY_ID, client, log
 from discord import channel
 from discord.utils import get
 
@@ -91,3 +92,16 @@ async def mark_as_done(user: Member):
     data = await read_file("business/signin_channels.json")
     data[str(user.id)]['done'] = datetime.now().timestamp()
     await write_file("business/signin_channels.json", data)
+
+async def is_signin_complete(user: Member) -> bool:
+    if not os.path.exists(f"data/wallets/pi/{user.id}.json"):
+        log.debug('no wallet')
+        return False
+    
+    else:
+        data = await read_file(f"wallets/pi/{user.id}.json")
+        if not "verified" in data.get('badges', []):
+            log.debug('not verified')
+            return False
+    
+    return True

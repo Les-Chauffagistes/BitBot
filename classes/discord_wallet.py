@@ -244,25 +244,27 @@ class PiWallet(BaseDiscordWallet):
         await self.save()
         return False
     
-    async def become_seller(self):
-        deposit_amount = 5 + await self.find_digits() / 1_000_000
+    async def become_seller(self, full_price: bool = True):
+        price = 5 if full_price else 1
+        deposit_amount = price + await self.find_digits() / 1_000_000
         payments_ids: dict[str, str] = await read_file('wallets/pi_pending_payments.json')
         payments_ids[str(deposit_amount)] = self.id
         self.reason = 'seller'
         self.validation_amount = deposit_amount
         await write_file('wallets/pi_pending_payments.json', payments_ids)
         await self.save()
-        return await pay_seller(self, deposit_amount)
+        return await pay_seller(self, deposit_amount, full_price)
     
-    async def become_buyer(self):
-        deposit_amount = 2 + await self.find_digits() / 1_000_000
+    async def become_buyer(self, full_price: bool = True):
+        price = 5 if full_price else 1
+        deposit_amount = price + await self.find_digits() / 1_000_000
         payments_ids: dict[str, str] = await read_file('wallets/pi_pending_payments.json')
         payments_ids[str(deposit_amount)] = self.id
         self.reason = 'buyer'
         self.validation_amount = deposit_amount
         await write_file('wallets/pi_pending_payments.json', payments_ids)
         await self.save()
-        return await pay_buyer(self, deposit_amount)
+        return await pay_buyer(self, deposit_amount, full_price)
 
     @property
     def is_verified(self):

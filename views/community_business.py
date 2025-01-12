@@ -346,3 +346,4 @@ Vous recevez tous les privilèges d'acheteur, en plus du droit de créer des enc
         )
     )
     return embed, view
+

@@ -60,10 +60,12 @@ async def loop_pi_deposit():
                 history = await wallet_fulcran.get_mainnet_history()
 
             #log.debug(f'Scanning {len(history)} transactions...')
+            await sleep(2)
             for tx in history:
-                tx = await tx.payment
-                if tx.source != wallet_fulcran.address:
-                    if not await tx.is_blacklist():
+                if not await tx.is_blacklist():
+                    tx = await tx.payment
+                    await sleep(5)
+                    if tx.source != wallet_fulcran.address:
                         wallet = await PiWallet.add_to_wallet(tx.amount)
                         if wallet:
                             #log.info('Added', tx.amount, 'to wallet')
@@ -192,12 +194,10 @@ async def loop_pi_deposit():
                                 pass
                     
                     else:
-                        #log.debug('Blacklisted')
+                        #log.debug('Not a deposit')
                         pass
-                
-                else:
-                    #log.debug('Not a deposit')
-                    pass
+
+                    await tx.blacklist()
         
         except CancelledError:
             break
@@ -206,7 +206,7 @@ async def loop_pi_deposit():
             log.warn(traceback.format_exc())
             
         finally:
-            await sleep(5)
+            await sleep(15)
             continue
 
 async def loop_onchain_tx():
@@ -236,11 +236,13 @@ async def loop_onchain_tx():
                     
                 for transaction in transactions:
                     payment = await transaction.payment
+                    await sleep(1)
                     try:
                         if await payment.is_notified():
                             continue # skip searching and check next payment
 
                         log.info(f"checking ({payment.amount} π)")
+                        await sleep(1)
                         if payment.amount == item.price and payment.destination.address == onchain_wallet.address:
                             log.info(f'payment found ({item.name})')
                             for wallet_file in os.listdir("data/wallets/pi"):
@@ -305,7 +307,7 @@ async def loop_onchain_tx():
             log.warn(traceback.format_exc())
 
         finally:
-            await sleep(15)
+            await sleep(30)
 
 async def loop_delete_channel():
     log.info("Ready")
