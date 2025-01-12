@@ -7,8 +7,9 @@ from classes.discord_wallet import PiWallet
 from discord.ui import View, Modal, TextInput, Button, Select
 from classes.emoji import Emoji
 from classes.item import CommunityItem
-from functions.utils import create_user_signin_channel, read_file, write_file
-from init import COLOR, SELL_POST_CHANNEL_ID, SELLER_ROLE_ID, log, client
+from functions.utils import create_user_signin_channel, is_signin_complete, read_file, write_file
+from init import BUYER_ROLE_ID, COLOR, SELL_POST_CHANNEL_ID, SELLER_ROLE_ID, log, client
+from responses.default import incomplete_signin_view
 from views.community_business import delete_view, discord_pre_payout, item_card_view, item_edit, main_edit_view, onchain_pre_payout, wallet_creation_view
 import asyncio
 
@@ -19,11 +20,11 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
     components = id.split("#")
     match components[0]:
         case "BECOME_BUYER":
-            if interaction.guild.get_role(SELLER_ROLE_ID) in interaction.user.roles:
+            if await is_signin_complete(interaction.user):
                 await interaction.response.send_message(
                     embed = Embed(
                         title = "Vous êtes déjà acheteur",
-                        description = "Vous êtes déjà inscrit en tant qu'acheteur.",
+                        description = "Votre inscription en tant qu'acheteur a déjà été complétée.",
                         color = COLOR
                     ),
                     ephemeral = True
@@ -62,11 +63,11 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 )
         
         case "BECOME_SELLER":
-            if interaction.guild.get_role(SELLER_ROLE_ID) in interaction.user.roles:
+            if await is_signin_complete(interaction.user):
                 await interaction.response.send_message(
                     embed = Embed(
                         title = "Vous êtes déjà vendeur",
-                        description = "Vous êtes déjà inscrit en tant que vendeur.",
+                        description = "Votre inscription en tant que vendeur a déjà été complétée.",
                         color = COLOR
                     ),
                     ephemeral = True
@@ -140,10 +141,10 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                             wallet.address = raw_address.value.strip()
 
                         if role == "acheteur":
-                            embed, view = await wallet.become_buyer()
+                            embed, view = await wallet.become_buyer(not interaction.guild.get_role(BUYER_ROLE_ID) in interaction.user.roles)
                         
                         else:
-                            embed, view = await wallet.become_seller()
+                            embed, view = await wallet.become_seller(not interaction.guild.get_role(SELLER_ROLE_ID) in interaction.user.roles)
 
                         await interaction2.response.edit_message(
                             embed = embed,
@@ -161,6 +162,10 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 log.warn(traceback.format_exc())
         
         case "EDITITEM":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
+            
             product_id = int(components[-1])
             item = await CommunityItem.from_id(product_id)
             if not item:
@@ -225,6 +230,10 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             await interaction.response.send_modal(modal)
         
         case "ADDITEMIMAGE":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
+            
             product_id = int(components[-1])
             item = await CommunityItem.from_id(product_id)
             await interaction.response.edit_message(
@@ -296,6 +305,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                     )
             
         case "PUBLISHITEM":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(components[-1])
             item = await CommunityItem.from_id(item_id)
             if not await item.message:
@@ -319,6 +331,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 )
 
         case "SELECTITEM":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(values[0])
             item = await CommunityItem.from_id(item_id)
             embed, view, file = await item_edit(interaction, item, True)
@@ -329,6 +344,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             )
         
         case "BACKITEM":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             embed, view = await main_edit_view(interaction.user)
             await interaction.response.edit_message(
                 embed = embed,
@@ -337,6 +355,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             )
         
         case "SETPAYMENTMETHOD":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(components[-1])
             item = await CommunityItem.from_id(item_id)
             method: Literal['onchain', 'discord', 'any'] = values[0]
@@ -357,6 +378,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             )
             
         case "SETFEES":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(components[-1])
             item = await CommunityItem.from_id(item_id)
             fees: Literal["included", "euro", "none"] = values[0]
@@ -377,6 +401,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             )
         
         case "DELETEITEM":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(components[-1])
             item = await CommunityItem.from_id(item_id)
             embed, view = await delete_view(item)
@@ -387,6 +414,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             )
         
         case "CONFIRMDELETEITEM":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(components[-1])
             item = await CommunityItem.from_id(item_id)
             await (await item.message).delete()
@@ -409,6 +439,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             await interaction.delete_original_response()
 
         case "BUYITEM":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(components[-1])
             item = await CommunityItem.from_id(item_id)
             if item:
@@ -467,6 +500,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 )
         
         case "PAYWITH":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(components[-1])
             item = await CommunityItem.from_id(item_id)
             method: Literal["discord", "onchain"] = values[0]
@@ -482,6 +518,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             )
         
         case "CONFIRMBUY":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(components[-1])
             item = await CommunityItem.from_id(item_id)
             selected_method: Literal["discord", "onchain"] = components[1]
@@ -580,6 +619,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 )
             
         case "SELECTITEMSELLTYPE":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(id.split("#")[1])
             item = await CommunityItem.from_id(item_id)
             sell_type: Literal["unique", "multi"] = values[0]
@@ -593,6 +635,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             )
         
         case "PAUSEITEM":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(id.split("#")[1])
             item = await CommunityItem.from_id(item_id)
             message = await item.message
@@ -625,6 +670,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 )
         
         case "PLAYITEM":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(id.split("#")[1])
             item = await CommunityItem.from_id(item_id)
             message = await item.message
@@ -657,6 +705,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 )
         
         case "BACKITEMID":
+            if not await is_signin_complete(interaction.user):
+                await incomplete_signin_view(interaction)
+                return
             item_id = int(id.split("#")[1])
             item = await CommunityItem.from_id(item_id)
             embed, view, file = await item_edit(interaction, item, len(interaction.message.components) == 5)

@@ -10,11 +10,19 @@ class Transaction:
         self.source = Wallet(data.get("source"))
         self._network_ = network
         self.wallet = wallet
+        self.hash = data.get('hash')
+    
+    async def is_blacklist(self) -> bool:
+        return await Wallet.is_blacklisted(self)
+
+    async def blacklist(self):
+        return await Wallet.blacklist(self)
     
     @property
     async def payment(self):
+        r = (await api.request(f"/transactions/{self.hash}/operations", 'get', self._network_))
         return Payment(
-            (await api.request(f"/transactions/{self.hash}/operations", 'get', self._network_)).get("_embedded", {}).get("records", [])[0],
+            r.get("_embedded", {}).get("records", [])[0],
             self
         )
 

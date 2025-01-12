@@ -93,12 +93,20 @@ async def wallet_view(wallet: 'PiWallet', network: Literal["Mainnet", "Testnet",
     )
     return embed, File('assets/pi_wallet1.png', 'wallet.png')
 
-async def pay_seller(wallet: 'PiWallet', deposit_amount: float):
-    embed = Embed(
-        title = "Payer l'inscription de vendeur",
-        description = f"S'inscrire en tant que vendeur et bénéficier de tous les outils de vente du serveur coute 5 Pi. Pour payer, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
-        color = COLOR
-    )
+async def pay_seller(wallet: 'PiWallet', deposit_amount: float, full_price: bool = True):
+    if full_price:
+        embed = Embed(
+            title = "Payer l'inscription de vendeur",
+            description = f"S'inscrire en tant que vendeur et bénéficier de tous les outils de vente du serveur coute 5 Pi. Pour payer, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
+            color = COLOR
+        )
+    
+    else:
+        embed = Embed(
+            title = "Vous avez déjà payé les frais d'inscription",
+            description = f"Nous avons besoin de vérifier l'adresse que vous avez fournie. Pour terminer l'inscription, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
+        )
+
     view = View(timeout = None).add_item(
         Button(
             label = "Obtenir le montant",
@@ -112,12 +120,20 @@ async def pay_seller(wallet: 'PiWallet', deposit_amount: float):
     )
     return embed, view
 
-async def pay_buyer(wallet: 'PiWallet', deposit_amount: float):
-    embed = Embed(
-        title = "Payer l'inscription d'acheteur",
-        description = f"S'inscrire en tant qu'acheteur et acheter des produits sans frais sur le serveur coute 2 Pi. Pour payer, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
-        color = COLOR
-    )
+async def pay_buyer(wallet: 'PiWallet', deposit_amount: float, full_price: bool = True):
+    if full_price:
+        embed = Embed(
+            title = "Payer l'inscription d'acheteur",
+            description = f"S'inscrire en tant qu'acheteur et acheter des produits sans frais sur le serveur coute 2 Pi. Pour payer, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
+            color = COLOR
+        )
+
+    else:
+        embed = Embed(
+            title = "Vous avez déjà payé les frais d'inscription",
+            description = f"Nous avons besoin de vérifier l'adresse que vous avez fournie. Pour terminer l'inscription, envoyez **EXACTEMENT** {deposit_amount} Pi à l'adresse suivante :\n```{WALLET_PI_FULCRAN}```",
+        )
+        
     view = View(timeout = None).add_item(
         Button(
             label = "Obtenir le montant",
