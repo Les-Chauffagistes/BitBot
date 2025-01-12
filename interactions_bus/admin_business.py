@@ -1,10 +1,11 @@
+from re import A
 import traceback
 from discord import ButtonStyle, Embed, Interaction
 from discord.utils import MISSING
 from classes.discord_wallet import PiWallet
 from classes.emoji import Emoji
 from classes.item import AdminItem
-from views.admin_business import confirm_payment_view, item_modal, item_variante_modal, item_variante_view, item_view, preview_item_variant, product_view, select_channel, select_variante_purchase_view
+from views.admin_business import confirm_payment_view, emoji_select_view, item_modal, item_variante_modal, item_variante_view, item_view, preview_item_variant, product_view, select_variante_purchase_view, shop_main_view, shop_view
 from init import ADMIN_NOTIFICATIONS_CHANNEL_ID, COLOR, FULCRAN_ID, SERVER_NAME, log, client
 from discord.ui import View, Button, Modal, TextInput
 
@@ -138,15 +139,6 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                 attachments = [file] if file else []
             )
         
-        case "BUSINESSPUBLISHITEM":
-            item_id = int(id.split("#")[1])
-            item = await AdminItem.from_id(item_id)
-            embed, view = select_channel(item)
-            await interaction.response.edit_message(
-                embed = embed,
-                view = view,
-            )
-        
         case "BUSINESSSELECTCHANNEL":
             item_id = int(id.split("#")[1])
             item = await AdminItem.from_id(item_id)
@@ -178,10 +170,9 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             item_id = int(id.split("#")[1])
             item = await AdminItem.from_id(item_id)
             embed, view = select_variante_purchase_view(item)
-            await interaction.response.send_message(
+            await interaction.response.edit_message(
                 embed = embed,
                 view = view,
-                ephemeral = True
             )
 
         case "BUSINESSSELECTPURCHASEITEM":
@@ -321,3 +312,73 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
 
             modal.on_submit = on_code
             await interaction.response.send_modal(modal)
+        
+        case "OPENSHOP":
+            embed, view = await shop_main_view()
+            await interaction.response.send_message(
+                embed = embed,
+                view = view,
+                ephemeral = True
+            )
+        
+        case "BACKSHOP":
+            embed, view = await shop_main_view()
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view
+            )
+        
+        case "FULCRANSHOPSELECTITEM":
+            item_id = int(values[0])
+            item = await AdminItem.from_id(item_id)
+            embed, view, file = await product_view(item)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view,
+                attachments = [file] if file else []
+            )
+        
+        case "SHOPSELECTITEM":
+            item_id = int(id.split("#")[1])
+            item = await AdminItem.from_id(item_id)
+            embed, view, file = await product_view(item)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view,
+                attachments = [file] if file else []
+            )
+        
+        case "ADMINSELECTSHOP":
+            item_id = int(values[0])
+            item = await AdminItem.from_id(item_id)
+            embed, view, file = await item_view(item)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view,
+                attachments = [file] if file else []
+            )
+        
+        case "BUSINESSPUBLISHITEM":
+            item_id = int(id.split("#")[1])
+            item = await AdminItem.from_id(item_id)
+        
+        case "BUSINESSEDITEMOJI":
+            item_id = int(id.split("#")[1])
+            item = await AdminItem.from_id(item_id)
+            embed, view = await emoji_select_view(item)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view
+            )
+        
+        case "BUSINESSSELECTEMOJI":
+            item_id = int(id.split("#")[1])
+            item = await AdminItem.from_id(item_id)
+            item.emoji = values[0]
+            await item.save()
+            embed, view, file = await item_view(item)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view,
+                attachments = [file] if file else []
+            )

@@ -5,7 +5,7 @@ from discord.utils import MISSING
 from classes.item import AdminItem
 from functions.utils import is_manager
 from responses.default import missing_permission
-from views.admin_business import item_modal, item_view
+from views.admin_business import item_modal, item_view, main_edit_view
 from init import log
 
 class CustomGroup(Group):
@@ -52,6 +52,25 @@ async def addCommand(interaction: Interaction):
 
             modal.on_submit = on_item
             await interaction.response.send_modal(modal)
+        
+        else:
+            await missing_permission(interaction)
+    
+    except:
+        log.warn(traceback.format_exc())
+
+@business.command(
+    name = "edit",
+    description = "Modifier une boutique ou un article"
+)
+async def editCommand(interaction: Interaction):
+    try:
+        if is_manager(interaction.user):
+            embed, view = await main_edit_view()
+            await interaction.response.send_message(
+                embed = embed,
+                view = view
+            )
         
         else:
             await missing_permission(interaction)

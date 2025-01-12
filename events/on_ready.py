@@ -8,6 +8,7 @@ import commands.pi
 import commands.pi_profile
 import commands.business
 import commands.context
+from views.admin_business import shop_view
 
 log.info("Registered on_ready")
 
@@ -31,6 +32,11 @@ async def on_ready():
         tree.add_command(commands.vente.ventes)
         tree.add_command(commands.business.business)
         tree.add_command(commands.badge.badge)
+        embed, view = await shop_view()
+        await (await fetch(FULCRAN_SHOP_CHANNEL_ID, FULCRAN_SHOP_MESSAGE_ID)).edit(
+            embed = embed,
+            view = view
+        )
         if SYNC:
             cmds = await tree.sync()
             log.info(f'{len(cmds)} commandes slash synchronisées')

@@ -2,6 +2,7 @@ from enum import Enum
 
 class Emoji(Enum):
 
+    # Material icons
     wallet = "<:wallet:1309943715137196075>"
     verified_user = "<:verified_user:1310218769682927667>"
     cart = "<:cart:1310231858998415441>"
@@ -22,6 +23,17 @@ class Emoji(Enum):
     play = "<:play:1324691102091186187>"
     done = "<:done:1324792101300600832>"
     report = "<:report:1326478828914086001>"
+
+    def __str__(self):
+        return self.value
+    
+    def __repr__(self):
+        return self.value
+    
+class ShopEmoji(Enum):
+    """Emojis utilisés dans la boutique Fulcran"""
+    
+    spotify = "<:spotify:1327220413402714173>"
 
     def __str__(self):
         return self.value

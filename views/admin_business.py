@@ -1,22 +1,22 @@
 import os
 from typing import Optional
 from discord import ButtonStyle, Embed, File, SelectOption, TextStyle
-from classes.emoji import Emoji
+from classes.emoji import Emoji, ShopEmoji
 from classes.item import AdminItem
 from discord.ui import Modal, TextInput, View, Button, Select, TextInput
-from init import COLOR, GUILD_ID, SHOP_CATEGORY, client
+from init import COLOR, GUILD_ID, SHOP_CATEGORY, client, log
 from discord.utils import get
 
 def item_modal(item: AdminItem | None):
-    modal = Modal(title = "Modifier le produit" if item else "Créer un produit")
+    modal = Modal(title = "Modifier la boutique" if item else "Ajouter une boutique")
     raw_title = TextInput(
-        label = "Nom du produit",
-        placeholder = "Superbe boule de pétanque",
+        label = "Nom de la boutique",
+        placeholder = "Amazon",
         default = item.name if item else None
     )
     raw_description = TextInput(
-        label = "Description du produit",
-        placeholder = "Balle ronde et grise",
+        label = "Description de la boutique",
+        placeholder = "Tous les articles de Amazon",
         style = TextStyle.long,
         default = item.description if item else None
     )
@@ -45,8 +45,8 @@ def build_variantes_select(item: AdminItem, selected_variante: Optional[AdminIte
 
     options.append(
         SelectOption(
-            label = "Nouvelle variante",
-            description = "Créer une nouvelle variante de l'objet",
+            label = "Ajouter un article",
+            description = "Créer un article pour la boutique",
             value = "NEW"
         )
     )
@@ -55,7 +55,7 @@ def build_variantes_select(item: AdminItem, selected_variante: Optional[AdminIte
 
 async def item_view(item: AdminItem):
     embed = Embed(
-        title = "Modifier le produit",
+        title = "Modifier la boutique",
         description = f"# {item.name}\n{item.description}",
         color = COLOR
     ).set_image(
@@ -69,9 +69,15 @@ async def item_view(item: AdminItem):
 
     view = View(timeout = None).add_item(
         Button(
-            label = "Modifier le produit",
+            label = "Modifier la boutique",
             emoji = Emoji.edit.value,
             custom_id = f"BUSINESSEDITITEM#{item.id}"
+        )
+    ).add_item(
+        Button(
+            label = "Emoji",
+            emoji = item.emoji,
+            custom_id = f"BUSINESSEDITEMOJI#{item.id}"
         )
     )
     
@@ -97,7 +103,7 @@ async def item_view(item: AdminItem):
 
     view.add_item(
         Select(
-            placeholder = "Variantes",
+            placeholder = "Produits",
             options = build_variantes_select(item, None),
             custom_id = f"BUSINESSSELECTVARIANTEID#{item.id}"
         )
@@ -107,7 +113,7 @@ async def item_view(item: AdminItem):
 def item_variante_modal(item: AdminItem, variante: Optional[AdminItem.Variante]):
     modal = Modal(title = f"Créer une variante de {item.name}")
     raw_name = TextInput(
-        label = "Nom de la variante",
+        label = "Nom du produit",
         placeholder = "Carte de 50€",
         default = variante.name if variante else "",
     )
@@ -139,7 +145,7 @@ def item_variante_view(item: AdminItem, variante: AdminItem.Variante):
         price_line = f"{variante.price} π"
 
     embed = Embed(
-        title = f"Modifier une variante de {variante.item.name}",
+        title = f"Modifier un produit de {variante.item.name}",
         description = f"## {variante.name}\n{variante.description}\n### {price_line}",
         color = COLOR
     )
@@ -147,20 +153,20 @@ def item_variante_view(item: AdminItem, variante: AdminItem.Variante):
     options = build_variantes_select(item, variante)
     view = View(timeout = None).add_item(
         Button(
-            label = "Modifier la variante",
+            label = "Modifier le produit",
             emoji = Emoji.edit.value,
             custom_id = f"BUSINESSEDITITEMVARIANTE#{variante.item.id}#{variante.id}"
         )
     ).add_item(
         Button(
-            label = "Supprimer la variante",
+            label = "Supprimer le produit",
             emoji = Emoji.delete.value,
             custom_id = "BUSINESSDELETEITEMVARIANTE#" + str(variante.item.id) + "#" + str(variante.id),
             style = ButtonStyle.danger
         )
     ).add_item(
         Select(
-            placeholder = "Variantes",
+            placeholder = "Produits",
             options = options,
             custom_id = f"BUSINESSSELECTVARIANTEID#{item.id}"
         )
@@ -180,51 +186,6 @@ def item_variante_view(item: AdminItem, variante: AdminItem.Variante):
 
     return embed, view, file
 
-def select_channel(item: AdminItem):
-    options: list[SelectOption] = []
-    category = get(client.get_guild(GUILD_ID).categories, id = SHOP_CATEGORY)
-    for channel in category.channels[0:25]:
-        options.append(
-            SelectOption(
-                label = channel.name,
-                value = channel.id,
-                description = channel.topic
-            )
-        )
-
-    view = View(timeout = None)
-    
-    if not options == []:
-        view.add_item(
-            Select(
-                placeholder = "Salons...",
-                options = options,
-                custom_id = f"BUSINESSSELECTCHANNEL#{item.id}"
-            )
-        )
-        embed = Embed(
-            title = "Choisir un salon pour le produit",
-            description = "Publiez le produit dans le salon de votre choix",
-            color = COLOR
-        )
-    
-    else:
-        embed = Embed(
-            title = "Aucun salon disponible",
-            description = "Veuillez créer un salon pour publier le produit",
-            color = COLOR
-        )
-    
-    view.add_item(
-        Button(
-            label = "Retour",
-            custom_id = "BUSINESSSELECTIEM#" + str(item.id),
-            emoji = Emoji.back.value
-        )
-    )
-    
-    return embed, view
-
 async def product_view(item: AdminItem):
     embed = Embed(
         title = "Boutique Fulcran",
@@ -235,7 +196,13 @@ async def product_view(item: AdminItem):
     )
     view = View(timeout = None).add_item(
         Button(
-            label = "Acheter",
+            label = "Retour",
+            emoji = Emoji.back.value,
+            custom_id = "BACKSHOP"
+        )
+    ).add_item(
+        Button(
+            label = "Voir les options",
             emoji = Emoji.shop_bag.value,
             custom_id = f"BUYBUSINESSSHOPITEM#{item.id}",
             style = ButtonStyle.green
@@ -262,6 +229,12 @@ def select_variante_purchase_view(item: AdminItem):
             placeholder = "Options",
             options = options,
             custom_id = f"BUSINESSSELECTPURCHASEITEM#{item.id}"
+        )
+    ).add_item(
+        Button(
+            label = "Retour",
+            emoji = Emoji.back.value,
+            custom_id = f"SHOPSELECTITEM#{item.id}"
         )
     )
     return embed, view
@@ -291,7 +264,7 @@ def preview_item_variant(item: AdminItem, variante: AdminItem.Variante):
         Button(
             label = "Tout compte fait, non",
             emoji = Emoji.back.value,
-            custom_id = "DESTROY",
+            custom_id = "BACKSHOP",
         )
     ).add_item(
         Button(
@@ -312,7 +285,7 @@ def confirm_payment_view(item: AdminItem, variante: AdminItem.Variante):
     view = View(timeout = None).add_item(
         Button(
             label = "Annuler",
-            custom_id = "DESTROY",
+            custom_id = f"SHOPSELECTITEM#{item.id}",
             style = ButtonStyle.danger
         )
     ).add_item(
@@ -323,4 +296,118 @@ def confirm_payment_view(item: AdminItem, variante: AdminItem.Variante):
             style = ButtonStyle.green
         )
     )
+    return embed, view
+
+async def shop_view():
+    embed = Embed(
+        title = "Boutique Fulcran",
+        description = "Consulter la boutique",
+        color = COLOR
+    )
+    view = View(timeout = None).add_item(
+        Button(
+            label = "Ouvrir la boutique",
+            custom_id = "OPENSHOP",
+            style = ButtonStyle.blurple
+        )
+    )
+    return embed, view
+
+async def shop_main_view():
+    embed = Embed(
+        title = "Boutique Fulcran",
+        description = "Choisissez un produit",
+        color = COLOR
+    )
+    shop: list[AdminItem] = []
+    options : list[SelectOption] = []
+    for file in os.listdir("data/business/shop"):
+        item = await AdminItem.from_id(file.split(".")[0])
+        shop.append(item)
+        options.append(
+            SelectOption(
+                label = item.name,
+                description = f"Dès {item.min_price} π - {item.description[:30]}",
+                value = item.id,
+                emoji = item.emoji
+            )
+        )
+
+    view = View(timeout = None).add_item(
+        Select(
+            placeholder = "Produits",
+            options = options,
+            custom_id = f"FULCRANSHOPSELECTITEM#{shop[-1].id}"
+        )
+    )
+    return embed, view
+
+async def main_edit_view():
+    embed = Embed(
+        title = "Édition de la boutique Fulcran",
+        description = "Sélectionnez une boutique pour la modifier, ou modifier un article de celle ci",
+        color = COLOR
+    )
+
+    options: list[SelectOption] = []
+    for file in os.listdir("data/business/shop"):
+        item = await AdminItem.from_id(file.split(".")[0])
+        options.append(
+            SelectOption(
+                label = item.name,
+                description = f"Dès {item.min_price} π - {item.description[:30]}",
+                value = item.id
+            )
+        )
+
+    view = View(timeout = None).add_item(
+        Select(
+            placeholder = "Boutiques",
+            options = options,
+            custom_id = "ADMINSELECTSHOP"
+        )
+    )
+    return embed, view
+
+async def emoji_select_view(item: AdminItem):
+    options: list[SelectOption] = []
+    for emoji in ShopEmoji:
+        options.append(
+            SelectOption(
+                label = emoji.name,
+                emoji = emoji.value,
+                value = emoji.value
+            )
+        )
+    view = View(timeout = None)
+    if options:
+        embed = Embed(
+            title = "Modifier l'emoji",
+            description = f"Choisissez un emoji pour {item.name}",
+            color = COLOR
+        )
+
+        view.add_item(
+            Select(
+                placeholder = "Emoji",
+                options = options,
+                custom_id = f"BUSINESSSELECTEMOJI#{item.id}"
+            )
+        )
+    
+    else:
+        embed = Embed(
+            title = "Modifier l'emoji",
+            description = f"Aucun emoji disponible sur {client.get_guild(GUILD_ID).name}",
+            color = COLOR
+        )
+
+    view.add_item(
+        Button(
+            label = "Retour",
+            emoji = Emoji.back.value,
+            custom_id = f"BUSINESSSELECTIEM#{item.id}"
+        )
+    )
+
     return embed, view
