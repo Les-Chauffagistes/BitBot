@@ -319,8 +319,8 @@ async def loop_delete_channel():
                 if end_date: # Expired channel, deleting
                     try:
                         channel = client.get_channel(channel_data.get("channel_id"))
-                        log.debug(datetime.fromtimestamp(end_date) + timedelta(minutes = 10), datetime.now(tz=timezone.utc))
-                        if end_date + timedelta(minutes = 10) < datetime.now(tz=timezone.utc) :
+                        log.debug(datetime.fromtimestamp(end_date) + timedelta(minutes = 10), datetime.now())
+                        if datetime.fromtimestamp(end_date) + timedelta(minutes = 10) < datetime.now() :
                             await channel.delete(reason = "Inscription terminée")
                         
                         else: # Not expired, conserving
