@@ -238,7 +238,7 @@ async def item_card_view(item: CommunityItem):
         name = guild.get_member(item.seller_id).display_name,
         icon_url = guild.get_member(item.seller_id).display_avatar.url
     ).set_footer(
-        text = f"{'Frais de ports inclus' if item.fees == "included" else "Frais de ports à régler en Euro"} ・ {'Paiment OnChain' if item.payment_method == "onchain" else 'Paiement Discord' if item.payment_method == "discord" else "Paiement OnChain ou Discord"}"
+        text = f"{'Frais de ports inclus' if item.fees == "included" else "Frais de ports à régler en Euro" if item.fees == "euro" else "Aucun frais de port"} ・ {'Paiment OnChain' if item.payment_method == "onchain" else 'Paiement Discord' if item.payment_method == "discord" else "Paiement OnChain ou Discord"}"
     ).set_image(
         url = "attachment://image.png"
     )
