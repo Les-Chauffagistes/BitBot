@@ -6,7 +6,9 @@ from discord.ui import View, Button, Modal, TextInput
 from classes.commands import Command
 from classes.discord_wallet import PiWallet
 from classes.emoji import Emoji
+from functions.utils import is_seller, is_signin_complete
 from init import COLOR, log
+from responses.default import incomplete_signin_view
 from views.pi_wallet import wallet_view
 
 class CustomGroup(Group):
@@ -20,6 +22,13 @@ pi = CustomGroup(name = "pi", description = "Intégration Pi Network")
 )
 @describe(network = "Réseau sur lequel chercher votre wallet Pi")
 async def wallet(interaction: Interaction, network: Literal['Mainnet', 'Testnet', 'Discord'], utilisateur: Optional[User]):
+    self = True
+    if utilisateur:
+        self = False
+        if utilisateur.id == interaction.user.id:
+            self = True
+
+    log.debug('self:', self)
     try:
         match network:
             case "Discord":
@@ -54,6 +63,21 @@ async def wallet(interaction: Interaction, network: Literal['Mainnet', 'Testnet'
                     )
             
             case "Mainnet" | "Testnet":
+                if not self:
+                    if not is_seller(interaction.user):
+                        await interaction.response.send_message(
+                            embed = Embed(
+                                title = "Accès non autorisé",
+                                description = "L'accès au solde est réservé aux vendeurs",
+                                color = COLOR
+                            )
+                        )
+                        return
+                    
+                    if not await is_signin_complete(utilisateur):
+                        await incomplete_signin_view(interaction)
+                        return
+
                 wallet = await PiWallet.from_user(utilisateur.id if utilisateur else interaction.user.id)
                 if wallet:
                     if wallet.address:
