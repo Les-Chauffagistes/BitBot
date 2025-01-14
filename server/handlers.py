@@ -18,5 +18,5 @@ async def server(request: Request):
     return json_response({
         "name": guild.name,
         "members": guild.member_count,
-        "online": len([member for member in guild.members if member.status.value == "online"])
+        "online": len([member for member in guild.members if member.status.value != "offline"])
     })
