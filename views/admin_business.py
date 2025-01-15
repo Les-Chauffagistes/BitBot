@@ -81,7 +81,17 @@ async def item_view(item: AdminItem):
         )
     )
     
-    if not await item.message:
+    if item.published:
+        view.add_item(
+            Button(
+                label = "Retirer",
+                style = ButtonStyle.danger,
+                emoji = Emoji.delete.value,
+                custom_id = f"BUSINESSSTOPTEM#{item.id}"
+            )
+        )
+    
+    else:
         view.add_item(
             Button(
                 label = "Publier",
@@ -90,17 +100,7 @@ async def item_view(item: AdminItem):
                 custom_id = f"BUSINESSPUBLISHITEM#{item.id}"
             )
         )
-    
-    else:
-        view.add_item(
-            Button(
-                label = "Supprimer",
-                style = ButtonStyle.danger,
-                emoji = Emoji.delete.value,
-                custom_id = f"BUSINESSDELETEITEM#{item.id}"
-            )
-        )
-
+        
     view.add_item(
         Select(
             placeholder = "Produits",
@@ -314,16 +314,13 @@ async def shop_view():
     return embed, view
 
 async def shop_main_view():
-    embed = Embed(
-        title = "Boutique Fulcran",
-        description = "Choisissez un produit",
-        color = COLOR
-    )
-    shop: list[AdminItem] = []
+    
     options : list[SelectOption] = []
     for file in os.listdir("data/business/shop"):
         item = await AdminItem.from_id(file.split(".")[0])
-        shop.append(item)
+        if not item.published:
+            continue
+
         options.append(
             SelectOption(
                 label = item.name,
@@ -333,13 +330,28 @@ async def shop_main_view():
             )
         )
 
-    view = View(timeout = None).add_item(
-        Select(
-            placeholder = "Produits",
-            options = options,
-            custom_id = f"FULCRANSHOPSELECTITEM#{shop[-1].id}"
+    if options:
+        embed = Embed(
+            title = "Boutique Fulcran",
+            description = "Choisissez un produit",
+            color = COLOR
         )
-    )
+        view = View(timeout = None).add_item(
+            Select(
+                placeholder = "Produits",
+                options = options,
+                custom_id = f"FULCRANSHOPSELECTITEM"
+            )
+        )
+    
+    else:
+        embed = Embed(
+            title = "Boutique Fulcran",
+            description = "Aucun produit disponible",
+            color = COLOR
+        )
+        view = View()
+
     return embed, view
 
 async def main_edit_view():

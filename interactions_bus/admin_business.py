@@ -229,11 +229,10 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                         )
 
                         f_wallet = await PiWallet.from_user(FULCRAN_ID)
-                        await f_wallet.add_pi(variante.user_price)
                         await client.get_channel(ADMIN_NOTIFICATIONS_CHANNEL_ID).send(
                             embed = Embed(
                                 title = "Nouvelle commande",
-                                description = f"Nouvelle commande passée dans la boutique **Fulcran**\n\n## {item.name} : {variante.name}",
+                                description = f"Nouvelle commande passée dans la boutique **Fulcran**\n\n## {item.name} : {variante.name}\nN° de commande : {interaction.id}",
                                 color = COLOR
                             ).set_author(
                                 name = interaction.user.display_name,
@@ -247,6 +246,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                                 )
                             )
                         )
+                        await f_wallet.add_pi(variante.user_price)
                         return
                     
                     else:
@@ -361,6 +361,14 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
         case "BUSINESSPUBLISHITEM":
             item_id = int(id.split("#")[1])
             item = await AdminItem.from_id(item_id)
+            item.published = True
+            await item.save()
+            embed, view, file = await item_view(item)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view,
+                attachments = [file] if file else []
+            )
         
         case "BUSINESSEDITEMOJI":
             item_id = int(id.split("#")[1])
@@ -375,6 +383,18 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
             item_id = int(id.split("#")[1])
             item = await AdminItem.from_id(item_id)
             item.emoji = values[0]
+            await item.save()
+            embed, view, file = await item_view(item)
+            await interaction.response.edit_message(
+                embed = embed,
+                view = view,
+                attachments = [file] if file else []
+            )
+        
+        case "BUSINESSSTOPTEM":
+            item_id = int(id.split("#")[1])
+            item = await AdminItem.from_id(item_id)
+            item.published = False
             await item.save()
             embed, view, file = await item_view(item)
             await interaction.response.edit_message(

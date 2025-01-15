@@ -19,7 +19,7 @@ class BaseItem:
 class AdminItem(BaseItem):
     """Représente un objet mis en vente par Fulcran"""
 
-    __slots__ = BaseItem.__slots__ + ("__variantes__", "emoji")
+    __slots__ = BaseItem.__slots__ + ("__variantes__", "emoji", "published")
 
     class Variante(BaseItem):
         """Représente une variante de l'objet"""
@@ -61,10 +61,11 @@ class AdminItem(BaseItem):
             
             return self.price
 
-    def __init__(self, id, name, description, channel_id, message_id, variantes: list[Variante], emoji: Optional[str]):
+    def __init__(self, id, name, description, channel_id, message_id, variantes: list[Variante], emoji: Optional[str], published: bool):
         super().__init__(id, name, description, channel_id, message_id)
         self.__variantes__ = variantes
         self.emoji = emoji
+        self.published = published
 
     def get_variante(self, id: int):
         for variante in self.__variantes__:
@@ -122,7 +123,8 @@ class AdminItem(BaseItem):
             "channel_id": self.channel_id,
             "message_id": self.message_id,
             "variantes": [v.json for v in self.variantes],
-            "emoji": self.emoji
+            "emoji": self.emoji,
+            "published": self.published
         }
 
     async def save(self):
