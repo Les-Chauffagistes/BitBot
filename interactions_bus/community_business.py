@@ -615,7 +615,8 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                         title = "Effectuer la transaction sur le Pi Browser",
                         description = f"{client.user.display_name} a averti {item.seller.display_name} de votre réservation.\nEnvoyez **EXACTEMENT** {item.price} π à cette adresse :\n ```{(await PiWallet.from_user(item.seller_id)).address}```. {client.user.display_name} vérifiera la transaction sur la blockchain et avertira {item.seller.display_name} dès que vous aurez effectué la transaction.",
                         color = COLOR
-                    )
+                    ),
+                    view = View()
                 )
             
         case "SELECTITEMSELLTYPE":
