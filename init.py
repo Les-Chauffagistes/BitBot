@@ -9,7 +9,7 @@ load_dotenv('data/.env')
 intents = Intents.default()
 intents.message_content = True
 intents.members = True
-intents.presences = False
+intents.presences = True
 client = Client(intents = intents)
 tree = app_commands.CommandTree(client)
 token = getenv('DISCORD_API_TOKEN')

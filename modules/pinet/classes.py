@@ -32,7 +32,7 @@ class Payment:
         self.success: bool = data.get('transaction_successful')
         self.source = Wallet(data.get("source_account"))
         self.destination = Wallet(data.get("to"))
-        self.amount = float(data.get("amount"))
+        self.amount = float(data.get("amount")) if data.get("amount") else 0
         self.type: Literal['payment'] = data.get("type")
         self.date = datetime.strptime(data.get('created_at'), "%Y-%m-%dT%H:%M:%SZ")
         self.hash: str = data.get("transaction_hash")
