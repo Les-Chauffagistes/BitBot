@@ -23,7 +23,7 @@ async def fromV1toV2():
                     "balance": pis_data.get(str(profile['user_id']), 0),
                     "validation_amount": None,
                     "payments_ids": [],
-                    "adress": profile['key'],
+                    "address": profile['key'],
                     "locale": profile['local'],
                     "reason": 'deposit'
                 }

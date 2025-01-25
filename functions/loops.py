@@ -61,6 +61,7 @@ async def loop_pi_deposit():
 
             #log.debug(f'Scanning {len(history)} transactions...')
             await sleep(2)
+            await sleep(2)
             for tx in history:
                 if not await tx.is_blacklist():
                     tx = await tx.payment
@@ -297,6 +298,7 @@ async def loop_onchain_tx():
                             log.info(f"missmach", payment.amount == item.price, payment.destination == onchain_wallet.address)
                     
                     except:
+                        
                         log.warn(traceback.format_exc())
                         continue
 
@@ -304,6 +306,7 @@ async def loop_onchain_tx():
             break
 
         except:
+            log.warn(sale_file)
             log.warn(traceback.format_exc())
 
         finally:
@@ -319,7 +322,6 @@ async def loop_delete_channel():
                 if end_date: # Expired channel, deleting
                     try:
                         channel = client.get_channel(channel_data.get("channel_id"))
-                        log.debug(datetime.fromtimestamp(end_date) + timedelta(minutes = 10), datetime.now())
                         if datetime.fromtimestamp(end_date) + timedelta(minutes = 10) < datetime.now() :
                             await channel.delete(reason = "Inscription terminée")
                         
