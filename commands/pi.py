@@ -1,5 +1,5 @@
 import traceback
-from typing import Literal, Optional
+from typing import Literal, Optional, cast
 from discord import ButtonStyle, Embed, Interaction, TextStyle, User
 from discord.app_commands import Group, describe, Range
 from discord.ui import View, Button, Modal, TextInput
@@ -22,20 +22,27 @@ pi = CustomGroup(name = "pi", description = "Intégration Pi Network")
 )
 @describe(network = "Réseau sur lequel chercher votre wallet Pi")
 async def wallet(interaction: Interaction, network: Literal['Mainnet', 'Testnet', 'Discord'], utilisateur: Optional[User]):
+    await interaction.response.defer(thinking = True)
     self = True
     if utilisateur:
+        target = utilisateur
         self = False
         if utilisateur.id == interaction.user.id:
             self = True
+    
+    else:
+        target = interaction.user
 
     log.debug('self:', self)
     try:
         match network:
             case "Discord":
-                wallet = await PiWallet.from_user(utilisateur.id if utilisateur else interaction.user.id)
+                log.debug('loading discord Wallet')
+                wallet = await PiWallet.from_user(target.id if target else interaction.user.id)
                 if wallet:
+                    log.debug('sending webhook...')
                     embed, file = await wallet_view(wallet, network)
-                    await interaction.response.send_message(
+                    await interaction.followup.send(
                         embed = embed,
                         file = file
                     )
@@ -57,15 +64,16 @@ async def wallet(interaction: Interaction, network: Literal['Mainnet', 'Testnet'
                             )
                         )
 
-                    await interaction.response.send_message(
+                    await interaction.followup.send(
                         embed = embed,
                         view = view
                     )
             
             case "Mainnet" | "Testnet":
                 if not self:
+                    assert target is not None
                     if not is_seller(interaction.user):
-                        await interaction.response.send_message(
+                        await interaction.followup.send(
                             embed = Embed(
                                 title = "Accès non autorisé",
                                 description = "L'accès au solde est réservé aux vendeurs",
@@ -74,22 +82,22 @@ async def wallet(interaction: Interaction, network: Literal['Mainnet', 'Testnet'
                         )
                         return
                     
-                    if not await is_signin_complete(utilisateur):
+                    if not await is_signin_complete(target):
                         await incomplete_signin_view(interaction)
                         return
 
-                wallet = await PiWallet.from_user(utilisateur.id if utilisateur else interaction.user.id)
+                wallet = await PiWallet.from_user(target.id if target else interaction.user.id)
                 if wallet:
                     if wallet.address:
                         embed, file = await wallet_view(wallet, network)
-                        await interaction.response.send_message(
+                        await interaction.followup.send(
                             embed = embed,
                             file = file
                         )
                     
                     else:
                         if not utilisateur:
-                            await interaction.response.send_message(
+                            await interaction.followup.send(
                                 embed = Embed(
                                     title = "Adresse non connue",
                                     description = f"Vous devez saisir votre adresse Pi Network pour que BitBot puisse récupérer votre solde à partir de la blockchain. Utilisez la commande {Command.pi_profile_edit}.",
@@ -98,23 +106,22 @@ async def wallet(interaction: Interaction, network: Literal['Mainnet', 'Testnet'
                             )
                         
                         else:
-                            await interaction.response.send_message(
+                            await interaction.followup.send(
                                 embed = Embed(
                                     title = "Adresse non connue",
-                                    description = f"{utilisateur.display_name} n'a pas fourni son adresse Pi Network.",
+                                    description = f"{target.display_name} n'a pas fourni son adresse Pi Network.",
                                     color = COLOR
                                 )
                             )
                 
                 else:
-                    await interaction.response.send_message(
+                    await interaction.followup.send(
                         embed = Embed(
                             title = "Adresse non connue",
-                            description = f"{utilisateur.display_name} n'a pas fourni son adresse Pi Network.",
+                            description = f"{target.display_name} n'a pas fourni son adresse Pi Network.",
                             color = COLOR
                         )
                     )
-
     
     except:
         log.warn(traceback.format_exc())
@@ -131,7 +138,7 @@ async def sendCommand(interaction: Interaction, montant: Range[int, 1, 10_000], 
             try:
                 recipient_wallet = await PiWallet.from_user(membre.id)
                 if not recipient_wallet:
-                    recipient_wallet = await PiWallet.create_new(membre)
+                    recipient_wallet = cast(PiWallet, await PiWallet.create_new(membre))
                 
                 await sender_wallet.send(montant, recipient_wallet)
             
@@ -214,7 +221,7 @@ async def depositCommand(interaction: Interaction, montant: Range[int, 1, 10_000
     try:
         user_wallet = await PiWallet.from_user(interaction.user.id)
         if not user_wallet:
-            user_wallet = await PiWallet.create_new(interaction.user)
+            user_wallet = cast(PiWallet, await PiWallet.create_new(interaction.user))
         
         embed = await user_wallet.start_deposit(montant)
 

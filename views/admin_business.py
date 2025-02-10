@@ -2,325 +2,307 @@ import os
 from typing import Optional
 from discord import ButtonStyle, Embed, File, SelectOption, TextStyle
 from classes.emoji import Emoji
-from classes.item import AdminItem
-from discord.ui import Modal, TextInput, View, Button, Select, TextInput
-from init import COLOR, GUILD_ID, SHOP_CATEGORY, client
+from classes.brand import Brand
+from discord.ui import Modal, TextInput, View, Button, Select
+from init import COLOR, GUILD_ID, client, log
 from discord.utils import get
 
-def item_modal(item: AdminItem | None):
-    modal = Modal(title = "Modifier le produit" if item else "Créer un produit")
-    raw_title = TextInput(
-        label = "Nom du produit",
-        placeholder = "Superbe boule de pétanque",
-        default = item.name if item else None
-    )
-    raw_description = TextInput(
-        label = "Description du produit",
-        placeholder = "Balle ronde et grise",
-        style = TextStyle.long,
-        default = item.description if item else None
-    )
-    modal.add_item(raw_title).add_item(raw_description)
-    return modal, raw_title, raw_description
+Vue = tuple[Embed, View]
 
-def build_variantes_select(item: AdminItem, selected_variante: Optional[AdminItem.Variante]):
-    options: list[SelectOption] = []
-    for variante in item.variantes:
-        if variante.promo:
-            description = f"❌ {variante.price} π ✅ {variante.promo} π"
+async def brand_main_admin() -> Vue:
+    """Le sélecteur principal d'enseignes"""
+    options = await Brand.select_all_brands()
+    if options:
+        embed = Embed(
+            title = "Gestion des enseignes",
+            description = "Sélectionner un enseigne pour la modifier ou gérer les cartes",
+            color = COLOR
+        )
         
-        else:
-            description = f"{variante.price} π"
-        
-        description += f" ・ {variante.description}"
-
-        options.append(
-            SelectOption(
-                label = f"{variante.name}",
-                description = description,
-                value = variante.id,
-                default = variante == selected_variante if selected_variante else False,
-            )
-        )
-
-    options.append(
-        SelectOption(
-            label = "Nouvelle variante",
-            description = "Créer une nouvelle variante de l'objet",
-            value = "NEW"
-        )
-    )
-
-    return options
-
-async def item_view(item: AdminItem):
-    embed = Embed(
-        title = "Modifier le produit",
-        description = f"# {item.name}\n{item.description}",
-        color = COLOR
-    ).set_image(
-        url = "attachment://image.png"
-    )
-    if os.path.exists("data/business/images/" + str(item.id) + ".png"):
-        file = File(f"data/business/images/{item.id}.png", "image.png")
-    
-    else:
-        file = None
-
-    view = View(timeout = None).add_item(
-        Button(
-            label = "Modifier le produit",
-            emoji = Emoji.edit.value,
-            custom_id = f"BUSINESSEDITITEM#{item.id}"
-        )
-    )
-    
-    if not await item.message:
-        view.add_item(
-            Button(
-                label = "Publier",
-                style = ButtonStyle.success,
-                emoji = Emoji.world.value,
-                custom_id = f"BUSINESSPUBLISHITEM#{item.id}"
+        view = View(timeout = None).add_item(
+            Select(
+                placeholder = "Choisir une enseigne",
+                options = options,
+                custom_id = "ADMINSELECTBRAND"
             )
         )
     
     else:
-        view.add_item(
-            Button(
-                label = "Supprimer",
-                style = ButtonStyle.danger,
-                emoji = Emoji.delete.value,
-                custom_id = f"BUSINESSDELETEITEM#{item.id}"
-            )
+        embed = Embed(
+            title = "Gestion des enseignes",
+            description = "Aucune enseigne créée. Créez-en une d'abord.",
+            color = COLOR
         )
+        view = View()
 
-    view.add_item(
-        Select(
-            placeholder = "Variantes",
-            options = build_variantes_select(item, None),
-            custom_id = f"BUSINESSSELECTVARIANTEID#{item.id}"
-        )
-    )
-    return embed, view, file
+    return embed, view
 
-def item_variante_modal(item: AdminItem, variante: Optional[AdminItem.Variante]):
-    modal = Modal(title = f"Créer une variante de {item.name}")
-    raw_name = TextInput(
-        label = "Nom de la variante",
-        placeholder = "Carte de 50€",
-        default = variante.name if variante else "",
-    )
-    raw_description = TextInput(
-        label = "Description (faculatitf)",
-        placeholder = "Rechargez votre compte avec cette carte d'une valeur de 50€",
-        default = variante.description if variante else "",
-        required = False
-    )
-    raw_price = TextInput(
-        label = "Prix",
-        placeholder = "300",
-        default = variante.price if variante else ""
-    )
-    raw_promo = TextInput(
-        label = "Prix promotionnel",
-        placeholder = "280",
-        default = variante.promo if variante else "",
-        required = False
-    )
-    modal.add_item(raw_name).add_item(raw_description).add_item(raw_price).add_item(raw_promo)
-    return modal, raw_name, raw_description, raw_price, raw_promo
-
-def item_variante_view(item: AdminItem, variante: AdminItem.Variante):
-    if variante.promo:
-        price_line = f"~~{variante.price} π~~ **{variante.promo} π**"
+async def brand_main_edit(brand: Brand) -> Vue:
+    """Vue détaillée d'une enseigne"""
+    try:
+        start_price_text = f", à partir de {brand.start_price} π"
     
-    else:
-        price_line = f"{variante.price} π"
-
-    embed = Embed(
-        title = f"Modifier une variante de {variante.item.name}",
-        description = f"## {variante.name}\n{variante.description}\n### {price_line}",
-        color = COLOR
-    )
-
-    options = build_variantes_select(item, variante)
-    view = View(timeout = None).add_item(
-        Button(
-            label = "Modifier la variante",
-            emoji = Emoji.edit.value,
-            custom_id = f"BUSINESSEDITITEMVARIANTE#{variante.item.id}#{variante.id}"
-        )
-    ).add_item(
-        Button(
-            label = "Supprimer la variante",
-            emoji = Emoji.delete.value,
-            custom_id = "BUSINESSDELETEITEMVARIANTE#" + str(variante.item.id) + "#" + str(variante.id),
-            style = ButtonStyle.danger
-        )
-    ).add_item(
-        Select(
-            placeholder = "Variantes",
-            options = options,
-            custom_id = f"BUSINESSSELECTVARIANTEID#{item.id}"
-        )
-    ).add_item(
-        Button(
-            label = "Retour",
-            emoji = Emoji.back.value,
-            custom_id = f"BUSINESSSELECTIEM#{variante.item.id}",
-            row = 2
-        )
-    )
-    if os.path.exists(f"data/business/images/{variante.item.id}.png"):
-        file = File(f"data/business/images/{variante.item.id}.png", "image.png")
-
-    else:
-        file = None
-
-    return embed, view, file
-
-def select_channel(item: AdminItem):
-    options: list[SelectOption] = []
-    category = get(client.get_guild(GUILD_ID).categories, id = SHOP_CATEGORY)
-    for channel in category.channels[0:25]:
-        options.append(
-            SelectOption(
-                label = channel.name,
-                value = channel.id,
-                description = channel.topic
-            )
-        )
+    except Brand.CardError:
+        start_price_text = ""
 
     view = View(timeout = None)
-    
-    if not options == []:
+    options = brand.select_all_cards()
+    if options:
+        embed = Embed(
+            title = "Gestion des enseignes",
+            description = f"# {brand.name}\n{brand.description}\n{len(brand.cards)} options{start_price_text}\n\nUtilisez le menu pour gérer les différentes cartes de l'enseinge",
+            color = COLOR
+        )
         view.add_item(
             Select(
-                placeholder = "Salons...",
+                placeholder = "Choisir une carte",
                 options = options,
-                custom_id = f"BUSINESSSELECTCHANNEL#{item.id}"
+                custom_id = f"SELECTCARD#{brand.id}"
             )
-        )
-        embed = Embed(
-            title = "Choisir un salon pour le produit",
-            description = "Publiez le produit dans le salon de votre choix",
-            color = COLOR
         )
     
     else:
         embed = Embed(
-            title = "Aucun salon disponible",
-            description = "Veuillez créer un salon pour publier le produit",
+            title = "Gestion des enseignes",
+            description = f"# {brand.name}\n{brand.description}\n{len(brand.cards)} options{start_price_text}\n\nAjoutez votre première carte avec le bouton Nouvelle carte",
             color = COLOR
         )
-    
+
     view.add_item(
         Button(
             label = "Retour",
-            custom_id = "BUSINESSSELECTIEM#" + str(item.id),
+            custom_id = "ADMINBACKTOMAINBRANDEDIT",
             emoji = Emoji.back.value
         )
-    )
-    
-    return embed, view
-
-async def product_view(item: AdminItem):
-    embed = Embed(
-        title = "Boutique Fulcran",
-        description = f"# {item.name}\n{item.description}\n\n{len(item.variantes)} options, à partir de {item.min_price} π",
-        color = COLOR
-    ).set_image(
-        url = "attachment://image.png"
-    )
-    view = View(timeout = None).add_item(
-        Button(
-            label = "Acheter",
-            emoji = Emoji.shop_bag.value,
-            custom_id = f"BUYBUSINESSSHOPITEM#{item.id}",
-            style = ButtonStyle.green
-        )
-    )
-    if os.path.exists(f"data/business/images/{item.id}.png"):
-        file = File(f"data/business/images/{item.id}.png", "image.png")
-    
-    else:
-        file = None
-
-    return embed, view, file
-
-def select_variante_purchase_view(item: AdminItem):
-    embed = Embed(
-        title = "Choisir une option",
-        description = f"Choisissez une option pour {item.name}",
-        color = COLOR
-    )
-    options = build_variantes_select(item, None)
-    del options[-1]
-    view = View(timeout = None).add_item(
-        Select(
-            placeholder = "Options",
-            options = options,
-            custom_id = f"BUSINESSSELECTPURCHASEITEM#{item.id}"
-        )
-    )
-    return embed, view
-
-def preview_item_variant(item: AdminItem, variante: AdminItem.Variante):
-    if variante.promo:
-        price_line = f"~~{variante.price} π~~ **{variante.promo} π**"
-    
-    else:
-        price_line = f"{variante.price} π"
-
-    embed = Embed(
-        title = f"",
-        description = f"# {item.name}\n{item.description}\n## {variante.name}\n{variante.description}\n### {price_line}",
-        color = COLOR
-    )
-
-    options = build_variantes_select(item, variante)
-    del options[-1]
-    view = View(timeout = None).add_item(
-        Select(
-            placeholder = "Options",
-            options = options,
-            custom_id = f"BUSINESSSELECTPURCHASEITEM#{item.id}"
-        )
     ).add_item(
         Button(
-            label = "Tout compte fait, non",
+            label = "Nouvelle carte",
+            custom_id = f"ADMINADDNEWCARD#{brand.id}",
+            emoji = Emoji.add.value,
+            style = ButtonStyle.blurple
+        )
+    )
+    
+    return embed, view
+
+async def brand_card_edit(brand: Brand, card: Optional[Brand.Card]) -> Vue:
+    """Vue détaillée d'une carte"""
+    if card:
+        if card.promo_price:
+            price_text = f"~~{card.price} π~~ **{card.price} π**"
+        
+        else:
+            price_text = f"{card.price} π"
+
+        embed = Embed(
+            title = "Gestion des enseignes",
+            description = f"# {brand.name}\n{brand.description}\n## {card.name}\n### {price_text}\n{len(card.codes)} disponible{'s' if len(card.codes) > 1 else ''}",
+            color = COLOR
+        )
+
+        view = View(timeout = None).add_item(
+            Select(
+                placeholder = "Cartes",
+                options = brand.select_all_cards(card.id),
+                custom_id = f"SELECTCARD#{brand.id}"
+            )
+        ).add_item(
+            Button(
+                label = "Retour",
+                custom_id = f"ADMINBACKTOCARDEDIT#{brand.id}", #1
+                emoji = Emoji.back.value
+            )
+        ).add_item(
+            Button(
+                label = "Modifier",
+                custom_id = f"ADMINEDITCARD#{brand.id}#{card.id}",
+                emoji = Emoji.edit.value,
+                style = ButtonStyle.blurple
+            )
+        ).add_item(
+            Button(
+                label = "Gestion des codes",
+                custom_id = f"ADMINMANAGECODES#{brand.id}#{card.id}",
+                emoji = Emoji.code.value,
+                style = ButtonStyle.blurple
+            )
+        )
+        return embed, view
+    
+    else:
+        embed = Embed(
+            title = "Gestion des cartes",
+            description = f"# {brand.name}\n{brand.description}\nSélectionnez une carte pour la modifier",
+        )
+        view = View(timeout = None).add_item(
+            Select(
+                placeholder = "Cartes",
+                options = brand.select_all_cards(),
+                custom_id = f"SELECTCARD#{brand.id}"
+            )
+        ).add_item(
+            Button(
+                label = "Retour",
+                custom_id = f"ADMINBACKTOMAINCARDEDIT#{brand.id}",
+                emoji = Emoji.back.value
+            )
+        ).add_item(
+            Button(
+                label = "Nouvelle carte",
+                custom_id = f"ADMINADDNEWCARD#{brand.id}",
+                emoji = Emoji.add.value,
+                style = ButtonStyle.blurple
+            )
+        )
+        return embed, view
+    
+def admin_brand_modal_edit(brand: Optional[Brand]):
+    if brand:
+        modal = Modal(title = "Modifier l'enseigne")
+        raw_name = TextInput(
+            label = "Nom de l'enseigne",
+            placeholder = brand.name,
+            default = brand.name
+        )
+        raw_description = TextInput(
+            label = "Description de l'enseigne",
+            placeholder = brand.description,
+            style = TextStyle.long,
+            default = brand.description
+        )
+        modal.add_item(raw_name).add_item(raw_description)
+
+    else:
+        modal = Modal(title = "Nouvelle enseigne")
+        raw_name = TextInput(
+            label = "Nom de l'enseigne",
+            placeholder = "Netflix"
+        )
+        raw_description = TextInput(
+            label = "Description de l'enseigne",
+            placeholder = "Une carte cadeau qui va soulager votre carte bancaire",
+            style = TextStyle.long,
+        )
+        modal.add_item(raw_name).add_item(raw_description)
+
+    return modal, raw_name, raw_description
+
+def admin_card_modal_edit(card: Optional[Brand.Card]):
+    if card:
+        modal = Modal(title = "Modifier la carte")
+        raw_name = TextInput(
+            label = "Nom de la carte",
+            placeholder = card.name,
+            default = card.name
+        )
+        raw_value = TextInput(
+            label = "Valeur de la carte (€)",
+            placeholder = str(card.value),
+            default = str(card.value)
+        )
+        raw_price = TextInput(
+            label = "Prix de vente (Pi)",
+            placeholder = str(card.price),
+            default = str(card.price)
+        )
+        raw_promo_price = TextInput(
+            label = "Prix de vente promotionnel (Pi)",
+            placeholder = str(card.promo_price) if card.promo_price else "",
+            default = str(card.promo_price) if card.promo_price else "",
+            required = False
+        )
+        modal.add_item(raw_name).add_item(raw_value).add_item(raw_price).add_item(raw_promo_price)
+
+    else:
+        modal = Modal(title = "Nouvelle carte")
+        raw_name = TextInput(
+            label = "Nom de la carte",
+            placeholder = "Carte cadeau de 20€"
+        )
+        raw_value = TextInput(
+            label = "Valeur de la carte (€)",
+            placeholder = "1"
+        )
+        raw_price = TextInput(
+            label = "Prix de vente (Pi)",
+            placeholder = "230"
+        )
+        raw_promo_price = TextInput(
+            label = "Prix de vente en promo (Pi)",
+            placeholder = "200",
+            required = False
+        )
+        modal.add_item(raw_name).add_item(raw_value).add_item(raw_price).add_item(raw_promo_price)
+    
+    return modal, raw_name, raw_value, raw_price, raw_promo_price
+
+def card_codes_view(brand: Brand, card: Brand.Card) -> Vue:
+    codes = card.codes
+    total_codes = len(codes)
+    embed = Embed(
+        title = "Codes d'activation",
+        description = f'## {brand.name} - {card.name}\n{total_codes} code{'s' if total_codes > 1 else ''}',
+        color = COLOR
+    )
+    options = [
+        SelectOption(
+            label = code,
+            emoji = Emoji.delete.value
+        ) for code in codes
+    ]
+    view = View(timeout = None)
+    if options:
+        view.add_item(
+            Select(
+                placeholder = "Supprimer un code",
+                options = options,
+                custom_id = f"DELETECARDCODE#{brand.id}#{card.id}"
+            )
+        )
+
+    view.add_item(
+        Button(
+            label = "Retour",
             emoji = Emoji.back.value,
-            custom_id = "DESTROY",
+            custom_id = f"BACKTOCARDEDIT#{brand.id}#{card.id}"
         )
     ).add_item(
         Button(
-            label = "Acheter",
-            emoji = Emoji.shop_bag.value,
-            custom_id = f"BUSINESSPURCHASEITEM#{item.id}#{variante.id}",
-            style = ButtonStyle.green
+            label = "Ajouter",
+            emoji = Emoji.add.value,
+            custom_id = f"CARDADDCODE#{brand.id}#{card.id}",
+            style = ButtonStyle.blurple
         )
     )
     return embed, view
 
-def confirm_payment_view(item: AdminItem, variante: AdminItem.Variante):
+def card_add_code_modal():
+    modal = Modal(title = "Nouveau code d'activation")
+    raw_code = TextInput(
+        label = "Code",
+        placeholder = "*****",
+        style = TextStyle.long
+    )
+    modal.add_item(raw_code)
+    return modal, raw_code
+
+def card_confirm_delete_code(brand: Brand, card: Brand.Card, code: str) -> Vue:
     embed = Embed(
-        title = "Confirmer l'achat",
-        description = f"Voulez-vous utiliser votre solde π sur Discord pour acheter **{item.name} : {variante.name}** pour **{variante.user_price} π** ?",
+        title = "Supprimer un code",
+        description = "Vouez-vous supprimer ce code d'activation ? Cette action est irreversible.",
         color = COLOR
     )
     view = View(timeout = None).add_item(
         Button(
             label = "Annuler",
-            custom_id = "DESTROY",
-            style = ButtonStyle.danger
+            custom_id = f"ADMINMANAGECODES#{brand.id}#{card.id}",
         )
     ).add_item(
         Button(
-            label = "Confirmer",
-            emoji = Emoji.shop_bag.value,
-            custom_id = f"BUSINESSCONFIRMPAYMENT#{item.id}#{variante.id}",
-            style = ButtonStyle.green
+            label = "Supprimer",
+            custom_id = f"CARDCONFIRMDELETECODE#{brand.id}#{card.id}#{code}",
+            style = ButtonStyle.red,
+            emoji = Emoji.delete.value
         )
     )
     return embed, view

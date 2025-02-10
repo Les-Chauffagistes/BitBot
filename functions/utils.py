@@ -1,9 +1,9 @@
 from datetime import datetime
 import os
 import aiofiles
-from typing import Literal, Union
+from typing import Any, Literal, Union, cast
 from json import loads, dumps
-from discord import Message, PermissionOverwrite, User, Member
+from discord import Guild, Message, PermissionOverwrite, TextChannel, User, Member
 from init import BUYER_ROLE_ID, GUILD_ID, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY_ID, client, log
 from discord import channel
 from discord.utils import get
@@ -34,36 +34,53 @@ async def write_file(name: str, data: Union[str, list, dict]) -> None:
         await async_writable_file.close()
     
 async def fetch(channel_id: int, message_id: int) -> Message:
-    return await client.get_channel(channel_id).fetch_message(message_id)
+    channel = client.get_channel(channel_id)
+    assert channel is not None
+    assert isinstance(channel, TextChannel)
+    return await channel.fetch_message(message_id)
 
 def is_manager(user: Union[User, Member]) -> bool:
     if isinstance(user, User):
-        user = client.get_guild(GUILD_ID).get_member(user.id)
+        guild = cast(Guild, client.get_guild(GUILD_ID))
+        retrieved_user = guild.get_member(user.id)
+        if not retrieved_user:
+            return False
+        
+        user = retrieved_user
+
     return not set([role.id for role in user.roles]).isdisjoint([1313062024200327238])
 
 def is_seller(user: User | Member) -> bool:
-    guild = client.get_guild(GUILD_ID)
+    guild = cast(Guild, client.get_guild(GUILD_ID))
     if isinstance(user, User):
-        user = guild.get_member(user.id)
+        retrieved_user = guild.get_member(user.id)
+        if not retrieved_user:
+            return False
+        
+        user = retrieved_user
 
     return guild.get_role(SELLER_ROLE_ID) in user.roles
 
 def is_buyer(user: User | Member) -> bool:
-    guild = client.get_guild(GUILD_ID)
+    guild = cast(Guild, client.get_guild(GUILD_ID))
     if isinstance(user, User):
-        user = guild.get_member(user.id)
+        retrieved_user = guild.get_member(user.id)
+        if not retrieved_user:
+            return False
+        
+        user = retrieved_user
     
     return guild.get_role(BUYER_ROLE_ID) in user.roles
     
 async def get_user_signin_channel(user: Member) -> tuple[channel.TextChannel, Message] | tuple[None, None]:
-    data: dict[str, int] = await read_file("business/signin_channels.json")
-    channel_id = data.get(str(user.id), {}).get("channel_id")
-    message_id = data.get(str(user.id), {}).get("message_id")
+    data = cast(dict[str, dict[str, int]], await read_file("business/signin_channels.json"))
+    channel_id = data.get(str(user.id), {}).get("channel_id", 0)
+    message_id = data.get(str(user.id), {}).get("message_id", 0)
     try:
         if channel_id:
-            channel = client.get_channel(channel_id)
+            channel = cast(TextChannel | None, client.get_channel(channel_id))
             if channel:
-                return (channel, await client.get_channel(channel_id).fetch_message(message_id))
+                return (channel, await channel.fetch_message(message_id))
             
         return None, None
 
@@ -89,17 +106,17 @@ async def create_user_signin_channel(user: Member, mode: Literal['vendeur', 'ach
         return current_channel, current_message
 
 async def mark_as_done(user: Member):
-    data = await read_file("business/signin_channels.json")
+    data = cast(dict[str, Any],await read_file("business/signin_channels.json"))
     data[str(user.id)]['done'] = datetime.now().timestamp()
     await write_file("business/signin_channels.json", data)
 
-async def is_signin_complete(user: Member) -> bool:
+async def is_signin_complete(user: Member | User) -> bool:
     if not os.path.exists(f"data/wallets/pi/{user.id}.json"):
         log.debug('no wallet')
         return False
     
     else:
-        data = await read_file(f"wallets/pi/{user.id}.json")
+        data = cast(dict[Literal["badges"], list[str]], await read_file(f"wallets/pi/{user.id}.json"))
         if not "verified" in data.get('badges', []):
             log.debug('not verified')
             return False

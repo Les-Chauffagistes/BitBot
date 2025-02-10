@@ -1,6 +1,6 @@
 import os
-from typing import Literal, Optional
-from discord import Embed, User
+from typing import Literal, Optional, TypedDict, cast
+from discord import Embed, Member, User
 from classes.emoji import Emoji
 from functions.utils import read_file, write_file
 from modules.pinet.classes import Wallet
@@ -32,7 +32,7 @@ class PiWallet(BaseDiscordWallet):
 
     __slots__ = BaseDiscordWallet.__slots__ + ('payments_ids', 'address', 'locale', 'reason')
 
-    def __init__(self, user_id: int, badges: bool, balance: float, address: str | None, validation_amount: Optional[float], payments_ids: list[int], locale: str, reason: Literal['deposit', 'seller', 'buyer']):
+    def __init__(self, user_id: int, badges: list[str], balance: float, address: str | None, validation_amount: Optional[float], payments_ids: list[int], locale: str, reason: Literal['deposit', 'seller', 'buyer']):
         super().__init__(user_id, badges, balance, validation_amount)
         self.payments_ids = payments_ids
         self.address = address
@@ -41,7 +41,7 @@ class PiWallet(BaseDiscordWallet):
 
     async def check_digits(self, digits: int):
         """Renvoie true si les digits sont disponibles, false sinon"""
-        data: dict[str, int] = await read_file("wallets/pi_pending_payments.json")
+        data = cast(dict[str, int], await read_file("wallets/pi_pending_payments.json"))
         return not int(digits) in data.values()
     
     async def find_digits(self):
@@ -63,7 +63,7 @@ class PiWallet(BaseDiscordWallet):
             self.reason = "deposit"
             await self.save()
             
-        payments_ids: dict[str, str] = await read_file('wallets/pi_pending_payments.json')
+        payments_ids = cast(dict[str, str | int], await read_file('wallets/pi_pending_payments.json'))
         payments_ids[str(self.validation_amount)] = self.id
         await write_file('wallets/pi_pending_payments.json', payments_ids)
 
@@ -107,7 +107,7 @@ class PiWallet(BaseDiscordWallet):
         self.reason = "deposit"
         await self.save()
         deposit_amount = amount + await self.find_digits() / 1_000_000
-        payments_ids: dict[str, str] = await read_file('wallets/pi_pending_payments.json')
+        payments_ids = cast(dict[str, str | int], await read_file('wallets/pi_pending_payments.json'))
         payments_ids[str(deposit_amount)] = self.id
         await write_file('wallets/pi_pending_payments.json', payments_ids)
         return await deposit_view(self, deposit_amount)
@@ -151,8 +151,8 @@ class PiWallet(BaseDiscordWallet):
         await self.save()
         return self
     
-    @staticmethod
-    async def create_new(for_user: User, address: Optional[str] = None, locale: Optional[str] = None):
+    @classmethod
+    async def create_new(cls, for_user: User | Member, address: Optional[str] = None, locale: Optional[str] = None):
         if await PiWallet.from_user(for_user.id):
             return
         
@@ -169,12 +169,22 @@ class PiWallet(BaseDiscordWallet):
                 "reason": 'deposit'
             }
         )
-        return await PiWallet.from_file(f'wallets/pi/{for_user.id}.json')
+        return await cls.from_file(f'wallets/pi/{for_user.id}.json')
     
-    @staticmethod
-    async def from_file(path: str):
-        data = await read_file(path)
-        return PiWallet(
+    class types(TypedDict):
+        id: int
+        badges: list[str]
+        balance: float
+        address: str
+        validation_amount: Optional[float]
+        payments_ids: list[int]
+        locale: str
+        reason: Literal['deposit', 'seller', 'buyer']
+    
+    @classmethod
+    async def from_file(cls, path: str):
+        data = cast(PiWallet.types, await read_file(path))
+        return cls(
             data.get('id'),
             data.get('badges', []),
             data.get("balance", 0),
@@ -185,12 +195,12 @@ class PiWallet(BaseDiscordWallet):
             data.get('reason', 'deposit')
         )
 
-    @staticmethod
-    async def add_to_wallet(amount: float):
+    @classmethod
+    async def add_to_wallet(cls, amount: float):
         #log.debug(f"Searching {amount}...")
-        payments_ids: dict[str, str] = await read_file('wallets/pi_pending_payments.json')
+        payments_ids = cast(dict[str, str], await read_file('wallets/pi_pending_payments.json'))
         if str(amount) in payments_ids:
-            wallet = await PiWallet.from_file(f'wallets/pi/{payments_ids[str(amount)]}.json')
+            wallet = await cls.from_file(f'wallets/pi/{payments_ids[str(amount)]}.json')
             wallet = await wallet.add_pi(amount)
             del payments_ids[str(amount)]
             await write_file('wallets/pi_pending_payments.json', payments_ids)
@@ -247,7 +257,7 @@ class PiWallet(BaseDiscordWallet):
     async def become_seller(self, full_price: bool = True):
         price = 5 if full_price else 1
         deposit_amount = price + await self.find_digits() / 1_000_000
-        payments_ids: dict[str, str] = await read_file('wallets/pi_pending_payments.json')
+        payments_ids = cast(dict[str, str | int], await read_file('wallets/pi_pending_payments.json'))
         payments_ids[str(deposit_amount)] = self.id
         self.reason = 'seller'
         self.validation_amount = deposit_amount
@@ -258,7 +268,7 @@ class PiWallet(BaseDiscordWallet):
     async def become_buyer(self, full_price: bool = True):
         price = 5 if full_price else 1
         deposit_amount = price + await self.find_digits() / 1_000_000
-        payments_ids: dict[str, str] = await read_file('wallets/pi_pending_payments.json')
+        payments_ids = cast(dict[str, str | int], await read_file('wallets/pi_pending_payments.json'))
         payments_ids[str(deposit_amount)] = self.id
         self.reason = 'buyer'
         self.validation_amount = deposit_amount

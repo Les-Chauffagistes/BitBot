@@ -1,0 +1,7 @@
+{
+    "reportUntypedFunctionDecorator": "warning",
+    "reportUntypedClassDecorator": "warning",
+    "reportOptionalMemberAccess": "warning",
+    "reportOptionalSubscript": "error",
+    "reportOptionalCall": "error"
+}

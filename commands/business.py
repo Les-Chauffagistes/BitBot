@@ -2,11 +2,11 @@ import traceback
 from discord import Interaction
 from discord.app_commands import Group, AppCommandContext
 from discord.utils import MISSING
-from classes.item import AdminItem
+from classes.brand import Brand
 from functions.utils import is_manager
 from responses.default import missing_permission
-from views.admin_business import item_modal, item_view
 from init import log
+from views.admin_business import admin_brand_modal_edit, brand_main_admin, brand_main_edit
 
 class CustomGroup(Group):
     pass
@@ -21,40 +21,52 @@ business = CustomGroup(
 )
 
 @business.command(
+    name = "edit",
+    description = "Modifier une enseigne ou une carte"
+)
+async def editCommand(interaction: Interaction):
+    try:
+        if is_manager(interaction.user):
+            embed, view = await brand_main_admin()
+            await interaction.response.send_message(
+                embed = embed,
+                view = view
+            )
+        
+        else:
+            await missing_permission(interaction)
+
+    except:
+        log.warn(traceback.format_exc())
+
+@business.command(
     name = "add",
-    description = "Ajouter un produit de vente générique"
+    description = "Ajouter une enseigne"
 )
 async def addCommand(interaction: Interaction):
     try:
         if is_manager(interaction.user):
-            modal, raw_title, raw_description = item_modal(None)
-            async def on_item(interaction2: Interaction):
+            modal, raw_name, raw_description = admin_brand_modal_edit(None)
+            async def handle_new_brand(interaction2: Interaction):
                 try:
-                    title = raw_title.value.strip()
+                    name = raw_name.value.strip()
                     description = raw_description.value.strip()
-                    item = AdminItem(
-                        interaction.id,
-                        title,
-                        description,
-                        None,
-                        None,
-                        []
-                    )
-                    await item.save()
-                    embed, view, file = await item_view(item) 
+                    brand = Brand(interaction2.id, name, description)
+                    await brand.save()
+                    embed, view = await brand_main_edit(brand)
                     await interaction2.response.send_message(
                         embed = embed,
-                        view = view,
-                        file = file if file else MISSING
+                        view = view
                     )
+                
                 except:
                     log.warn(traceback.format_exc())
 
-            modal.on_submit = on_item
+            modal.on_submit = handle_new_brand
             await interaction.response.send_modal(modal)
         
         else:
             await missing_permission(interaction)
-    
+
     except:
         log.warn(traceback.format_exc())
