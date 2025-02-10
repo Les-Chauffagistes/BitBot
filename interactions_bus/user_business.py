@@ -134,7 +134,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                             fulcran = await PiWallet.from_user(276123659050024962)
                             assert fulcran, "Yo comment ça mon reuf refais ton wallet"
                             await fulcran.add_pi(card.current_price)
-                            code = await card.drop_code()
+                            code = await card.drop_code(interaction.id, interaction.user)
                             await interaction.response.edit_message(
                                 embed = Embed(
                                     title = f"Votre code d'activation {brand.name}",

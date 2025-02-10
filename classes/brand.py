@@ -1,8 +1,11 @@
+from datetime import datetime
 import os
-from typing import Literal, Optional, cast
-from discord import SelectOption
+import traceback
+from typing import Any, Literal, Optional, cast
+from discord import Member, SelectOption, User
 from typing import TypedDict
 from functions.utils import read_file, write_file
+from init import client, log
 
 class Brand:
     """Représente une enseigne"""
@@ -47,10 +50,17 @@ class Brand:
                 self._codes.append(code)
                 await self.brand.save()
         
-        async def drop_code(self):
+        async def drop_code(self, drop_id: int | str, for_user: User | Member):
             if self._codes:
                 code = self._codes.pop(0)
                 await self.brand.save()
+                try:
+                    entry = self.brand.HistoryEntry(self.brand, self, datetime.now(), for_user.id)
+                    await entry.save_entry(drop_id)
+                
+                except:
+                    log.warn(traceback.format_exc())
+
                 return code
 
         
@@ -88,6 +98,58 @@ class Brand:
                 "codes": self.codes
             }
  
+    class HistoryEntry:
+        """Représente un élément d'historique de vente"""
+
+        __slots__ = ('brand', 'card', 'date', 'user_id')
+
+        def __init__(self, brand: Optional['Brand'], card: Optional['Brand.Card'], date: datetime, user_id: int):
+            self.brand = brand
+            self.card = card
+            self.date = date
+            self.user_id = user_id
+
+        @property
+        def user(self):
+            return client.get_user(self.user_id)
+        
+        class types(TypedDict):
+            brand_id: int | None
+            card_id: int | None
+            date: float
+            user_id: int
+        
+        async def save_entry(self, id: int | str):
+            raw_entries = cast(dict[str, 'Brand.HistoryEntry.types'], await read_file("business/history.json"))
+            if not id in raw_entries.keys():
+                raw_entries[str(id)] = {
+                    "brand_id": self.brand.id if self.brand else None,
+                    "card_id": self.card.id if self.card else None,
+                    "date": self.date.timestamp(),
+                    "user_id": self.user_id
+                }
+                await write_file("business/history.json", raw_entries)
+        
+        @classmethod
+        async def load_entry(cls, id: int | str):
+            raw_entries = cast(dict[str, 'Brand.HistoryEntry.types'], await read_file("business/history.json"))
+            raw_entry = raw_entries.get(str(id))
+            if raw_entry:
+                brand_id = raw_entry.get("brand_id")
+                brand = await Brand.from_id(brand_id) if brand_id else None
+                card = None
+                if brand:
+                    card_id = raw_entry.get("card_id")
+                    if card_id:
+                        card = brand.get_card(card_id) if card_id else None
+
+                return cls(
+                    brand = brand,
+                    card = card,
+                    date = datetime.fromtimestamp(raw_entry.get("date")),
+                    user_id = raw_entry.get("user_id")
+                )
+
     class CardError(Exception):
         def __init__(self, *args):
             super().__init__(*args)
