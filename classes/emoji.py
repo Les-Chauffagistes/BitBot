@@ -22,6 +22,9 @@ class Emoji(Enum):
     play = "<:play:1324691102091186187>"
     done = "<:done:1324792101300600832>"
     report = "<:report:1326478828914086001>"
+    add = "<:add:1337810147656863806>"
+    code = "<:passcode:1338478704749314121>"
+    message = "<:message:1338514047514972201>"
 
     def __str__(self):
         return self.value

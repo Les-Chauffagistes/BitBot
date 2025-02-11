@@ -1,4 +1,8 @@
 from enum import member
+import traceback
+from typing import Any, cast
+from classes.brand import Brand
+from functions.utils import read_file
 from init import COLOR, GUILD_ID, routes, log, client
 from aiohttp.web_request import Request
 from aiohttp.web import HTTPOk, json_response
@@ -20,3 +24,17 @@ async def server(request: Request):
         "members": guild.member_count,
         "online": len([member for member in guild.members if member.status.value != "offline"])
     })
+
+@routes.get('/business/entries')
+async def entries(request: Request):
+    data = cast(dict[str, Brand.HistoryEntry.types], await read_file('business/history.json'))
+    result = {}
+    for entry_id in data.keys():
+        try:
+            result[entry_id] = await Brand.HistoryEntry.load_entry(entry_id)
+        
+        except:
+            log.warn(traceback.format_exc())
+            continue
+
+    return json_response(result)

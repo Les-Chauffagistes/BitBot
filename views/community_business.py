@@ -1,7 +1,7 @@
 import os
 import traceback
-from typing import Literal, Optional
-from discord import ButtonStyle, Embed, File, Interaction, SelectOption, User
+from typing import Literal, Optional, cast
+from discord import ButtonStyle, Embed, File, Interaction, Member, SelectOption, User
 from classes.commands import Command
 from classes.discord_wallet import PiWallet
 from classes.emoji import Emoji
@@ -42,7 +42,7 @@ async def wallet_creation_view(interaction: Interaction, user_wallet: Optional[P
         )
         return embed, view
 
-async def item_edit(interaction: Interaction, item: CommunityItem = None, with_back: bool = False):
+async def item_edit(interaction: Interaction, item: CommunityItem, with_back: bool = False):
     embed = Embed(
         title = "Gérer le produit",
         description = f"# {item.name}\n{item.description}\n### **{item.price}** Pi",
@@ -184,13 +184,14 @@ async def item_edit(interaction: Interaction, item: CommunityItem = None, with_b
 
     return embed, view, File(f"data/business/images/{item.id}.png", "image.png") if os.path.exists(f"data/business/images/{item.id}.png") else None
 
-async def main_edit_view(user: User):
+async def main_edit_view(user: User | Member):
     sales: list[CommunityItem] = []
     for file_name in os.listdir("data/business/sales"):
         try:
-            file_data = await read_file(f"business/sales/{file_name}")
+            file_data = cast(dict[str, str], await read_file(f"business/sales/{file_name}"))
             if file_data['seller_id'] == user.id:
-                sales.append(await CommunityItem.from_id(file_data["id"]))
+                item = cast(CommunityItem, await CommunityItem.from_id(file_data["id"]))
+                sales.append(item)
         
         except:
             log.warn(traceback.format_exc())
@@ -316,7 +317,7 @@ async def delete_view(item: CommunityItem):
     )
     return embed, view
             
-async def signin_view():
+def signin_view():
     embed = Embed(
         title = "Commerce Pi Network",
         description = """
@@ -327,7 +328,7 @@ Vous pouvez participer aux enchères et acheter des produits mis en vente sur Di
 ## En tant que vendeur
 Vous recevez tous les privilèges d'acheteur, en plus du droit de créer des enchères, et de mettre en vente des articles sur Discord. Vous choisissez les modalités de paiement et d'envoi des produits physiques.
 
-> Les inscriptions sont soumises aux conditions de services. Consultez les [conditions de vente](https://swakraft.hopto.org/pilabs/terms) et la [charte du vendeur](https://swakraft.hopto.org/pilabs/guidelines). Nécessite un profil Pi vérifié sur le serveur.
+> Les inscriptions sont soumises aux conditions de services. Consultez les [conditions de vente](https://swakraft.hopto.org/pill-labs/terms) et la [charte du vendeur](https://swakraft.hopto.org/pill-labs/guidelines). Nécessite un profil Pi vérifié sur le serveur.
 """.strip(),
         color = COLOR
     )

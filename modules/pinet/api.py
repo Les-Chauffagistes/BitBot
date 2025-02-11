@@ -7,7 +7,7 @@ __TESTNET_ENDPOINT__ = "https://api.testnet.minepi.com/"
 
 async def request(url: str, method: Literal['get', 'post'], network: Literal['mainnet', 'testnet']) -> dict | list:
     async with ClientSession(__TESTNET_ENDPOINT__ if network == "testnet" else __MAINNET_ENDPOINT__) as session:
-        log.debug("making request", url)
+        # log.debug("making request", url)
         response = await session.request(
             method,
             url,

@@ -1,12 +1,15 @@
 import traceback
 from init import client, log
 from discord import Interaction
-from interactions_bus import utils, community_business, wallet, admin_business
+from interactions_bus import utils, community_business, wallet, admin_business, user_business
 
 log.info("Registered on_interaction")
 
 @client.event
 async def on_interaction(interaction: Interaction):
+    if not interaction.data:
+        return
+    
     if 'custom_id' in interaction.data:
         id = interaction.data['custom_id']
         if 'values' in interaction.data:
@@ -27,3 +30,4 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
     await wallet.interact(interaction, id, values)
     await community_business.interact(interaction, id, values)
     await admin_business.interact(interaction, id, values)
+    await user_business.interact(interaction, id, values)

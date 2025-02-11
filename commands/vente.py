@@ -69,6 +69,9 @@ async def addCommand(interaction: Interaction):
                 except:
                     log.warn(traceback.format_exc())
             
+            modal.on_submit = on_product_update
+            await interaction.response.send_modal(modal)
+
         else:
             await interaction.response.send_message(
                 embed = Embed(
@@ -77,9 +80,6 @@ async def addCommand(interaction: Interaction):
                     color = COLOR
                 )
             )
-
-        modal.on_submit = on_product_update
-        await interaction.response.send_modal(modal)
 
     except:
         log.warn(traceback.format_exc())

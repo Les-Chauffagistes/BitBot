@@ -10,6 +10,7 @@ import commands.business
 import commands.context
 from tools.whois import start_check
 from views.community_business import signin_view
+from views.user_business import shop_public_view
 
 log.info("Registered on_ready")
 
@@ -18,7 +19,7 @@ async def stop_tasks():
     log.warn("Stopping tasks...")
     for task in tasks:
         try:
-            task.cancel()
+            task.close()
         
         except:
             continue
@@ -40,7 +41,17 @@ async def on_ready():
             cmds = await tree.sync()
             log.info(f'{len(cmds)} commandes slash synchronisées')
         
-        embed, view = await signin_view()
+        embed, view = shop_public_view()
+        await (await fetch(SHOP_CHANNEL_ID, SHOP_MESSAGE_ID)).edit(
+            embed = embed,
+            view = view
+        )
+
+        embed, view = signin_view()
+        await (await fetch(SIGNIN_CHANNEL_ID, SIGNIN_MESSAGE_ID)).edit(
+            embed = embed,
+            view = view
+        )
         
         tasks = [
             loop_miner(),

@@ -1,5 +1,6 @@
 import inspect
 from datetime import datetime
+from typing import Any
 
 class Line:
     def __init__(self, timestamp: str, color_code: str, level: str, caller_info: str, content: tuple[str], line: int, log: 'Logger') -> None:
@@ -79,7 +80,7 @@ class Logger:
         hour_str = datetime_obj.strftime('%H:%M:%S')
         return f'{date_str} à {hour_str} '
 
-    def log(self, level: str, color_code: str, *content: str):
+    def log(self, level: str, color_code: str, *content: Any):
         if level not in ['GET', 'POST']:
             frame = inspect.stack()[2]
             caller = frame.function if frame.function != '<module>' else 'Main thread'
@@ -99,20 +100,20 @@ class Logger:
         print(text)
         return Line(timestamp, color_code, level, caller_info, content,self.curent_line, self)
         
-    def info(self, *content: str):
+    def info(self, *content: Any):
         self.log('INFO', '32', *content)
 
-    def warn(self, *content: str):
+    def warn(self, *content: Any):
         self.log('WARN', '33', *content)
 
-    def crit(self, *content: str):
+    def crit(self, *content: Any):
         self.log('CRIT', '31', *content)
 
-    def debug(self, *content: str):
+    def debug(self, *content: Any):
         self.log('DEBUG', '95', *content)
 
-    def get(self, *content: str):
+    def get(self, *content: Any):
         return self.log('GET', '38;5;30', *content)  # Couleur 30
 
-    def post(self, *content: str):
+    def post(self, *content: Any):
         return self.log('POST', '38;5;202',  *content)  # Couleur 202

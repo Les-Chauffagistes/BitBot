@@ -19,7 +19,7 @@ async def main():
     await client.connect()
 
 async def clear():
-    events.on_ready.stop_tasks()
+    await events.on_ready.stop_tasks()
     await client.close()
     client.clear()
     log.debug("Disconnected  ")
