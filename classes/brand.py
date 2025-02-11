@@ -113,6 +113,23 @@ class Brand:
         def user(self):
             return client.get_user(self.user_id)
         
+        @property
+        def json(self):
+            card_data = self.card.json() if self.card else None
+            brand_data = self.brand.json() if self.brand else None
+            if card_data:
+                del card_data["codes"]
+            
+            if brand_data:
+                del brand_data["cards"]
+
+            return {
+                "brand": brand_data,
+                "card": card_data,
+                "date": self.date.timestamp(),
+                "user_id": self.user_id
+            }
+        
         class types(TypedDict):
             brand_id: int | None
             card_id: int | None

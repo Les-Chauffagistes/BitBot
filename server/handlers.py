@@ -9,7 +9,7 @@ from aiohttp.web import HTTPOk, json_response
 from discord import Status
 
 log.info("Handler /test defined")
-@routes.post('/test')
+@routes.get('/test')
 async def message(request: Request):
     log.debug(await request.json())
     return HTTPOk(body="Success")
@@ -27,14 +27,15 @@ async def server(request: Request):
 
 @routes.get('/business/entries')
 async def entries(request: Request):
+    log.get("business/entries")
     data = cast(dict[str, Brand.HistoryEntry.types], await read_file('business/history.json'))
-    result = {}
+    result: dict[str, dict] = {}
     for entry_id in data.keys():
         try:
-            result[entry_id] = await Brand.HistoryEntry.load_entry(entry_id)
+            result[entry_id] = (await Brand.HistoryEntry.load_entry(entry_id)).json
         
         except:
             log.warn(traceback.format_exc())
             continue
-
+    
     return json_response(result)
