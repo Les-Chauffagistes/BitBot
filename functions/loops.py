@@ -9,7 +9,7 @@ from classes.item import CommunityItem
 from functions.utils import fetch, get_user_signin_channel, mark_as_done, read_file, write_file
 from init import BUYER_ROLE_ID, COLOR, GUILD_ID, MODE, SELLER_ROLE_ID, SERVER_NAME, WALLET_PI_FULCRAN, client, log
 from asyncio import sleep, CancelledError
-from modules.ckpool.api import get_miner_info
+from modules.ckpool import get_miners
 from modules.pinet.classes import Wallet
 import discord.utils as utils
 
@@ -25,7 +25,7 @@ async def loop_miner():
 
     while True:
         try: # Loop instructions
-            miners = await get_miner_info()
+            miners = await get_miners()
             txt = ""
             for miner in miners:
                 txt += f"{'🟢' if miner.is_on else '🔴'} **{miner.name} :** `{miner.hashrate.one_day}` {miner.last_update}\n"
