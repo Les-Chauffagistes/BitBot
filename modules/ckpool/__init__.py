@@ -1,12 +1,5 @@
-from typing import Literal
-from aiohttp import ClientSession
+from . import api
+from . import classes
+from . classes import Miner
 
-__MAINNET_ENDPOINT__ = "https://api.mainnet.minepi.com/"
-__TESTNET_ENDPOINT__ = "https://api.testnet.minepi.com/"
-
-async def request(url: str, method: Literal['get', 'post'], network: Literal['mainnet', 'testnet']) -> dict | list:
-    async with ClientSession(__TESTNET_ENDPOINT__ if network == "testnet" else __MAINNET_ENDPOINT__) as session:
-        return await (await session.request(
-            method,
-            url,
-        )).json()
+async def get_miners(): return await Miner.get_miner_info()
