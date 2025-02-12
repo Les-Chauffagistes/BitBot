@@ -56,7 +56,8 @@ async def addCommand(interaction: Interaction):
                         None,
                         'any',
                         'euro',
-                        'unique'
+                        'unique',
+                        False
                     )
                     await item.save()
                     embed, view, file = await item_edit(interaction2, item)

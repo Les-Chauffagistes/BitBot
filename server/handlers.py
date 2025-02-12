@@ -6,7 +6,7 @@ from functions.utils import read_file
 from init import COLOR, GUILD_ID, routes, log, client
 from aiohttp.web_request import Request
 from aiohttp.web import HTTPOk, json_response
-from discord import Status
+from discord import Guild, Status
 
 log.info("Handler /test defined")
 @routes.get('/test')
@@ -17,7 +17,7 @@ async def message(request: Request):
 @routes.get('/server')
 async def server(request: Request):
     """Renvoie les informations sur le serveur discord"""
-    guild = client.get_guild(GUILD_ID)
+    guild = cast(Guild, client.get_guild(GUILD_ID))
 
     return json_response({
         "name": guild.name,
@@ -32,7 +32,7 @@ async def entries(request: Request):
     result: dict[str, dict] = {}
     for entry_id in data.keys():
         try:
-            result[entry_id] = (await Brand.HistoryEntry.load_entry(entry_id)).json
+            result[entry_id] = (await Brand.HistoryEntry.load_entry(entry_id)).json #type: ignore
         
         except:
             log.warn(traceback.format_exc())

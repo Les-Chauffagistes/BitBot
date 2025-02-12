@@ -210,7 +210,7 @@ async def main_edit_view(user: User | Member):
                     SelectOption(
                         label = item.name,
                         description = f"{item.price} π ・ {item.description[:30]}...",
-                        value = item.id,
+                        value = str(item.id),
                         emoji = Emoji.lock.value if not await item.message else Emoji.world.value
                     )
                     for item in sales
@@ -231,13 +231,16 @@ async def main_edit_view(user: User | Member):
 
 async def item_card_view(item: CommunityItem):
     guild = client.get_guild(GUILD_ID)
+    assert guild
+    seller = guild.get_member(item.seller_id)
+    assert seller
     embed = Embed(
         title = "À vendre",
         description = f"""# {item.name}\n{item.description}\n\n### **{item.price} π**""",
         color = COLOR
     ).set_author(
-        name = guild.get_member(item.seller_id).display_name,
-        icon_url = guild.get_member(item.seller_id).display_avatar.url
+        name = seller.display_name,
+        icon_url = seller.display_avatar.url
     ).set_footer(
         text = f"{'Frais de ports inclus' if item.fees == "included" else "Frais de ports à régler en Euro" if item.fees == "euro" else "Aucun frais de port"} ・ {'Paiment OnChain' if item.payment_method == "onchain" else 'Paiement Discord' if item.payment_method == "discord" else "Paiement OnChain ou Discord"}"
     ).set_image(
@@ -275,6 +278,8 @@ def discord_pre_payout(item: CommunityItem):
     return embed, view
 
 def onchain_pre_payout(item: CommunityItem):
+    assert client.user
+    assert item.seller
     embed = Embed(
         title = "Confirmer l'achat ?",
         description = f"Vous allez utiliser la blockchain pour acheter {item.name} à {item.price} π.\nLorsque vous aurez confirmé, {client.user.display_name} préviendra {item.seller.display_name} de votre réservation. Il ne vous restera plus qu'à effectuer une transaction de {item.price} π vers le wallet de {item.seller.display_name}.",

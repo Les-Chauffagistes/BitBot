@@ -27,7 +27,7 @@ Envoyez **EXACTEMENT** {profile.validation_amount} Pi à l'adresse suivante :
             Button(
                 label = "Retour",
                 custom_id = back_id.upper(),
-                emoji = Emoji.back
+                emoji = Emoji.back.value
             )
         )
 
@@ -53,41 +53,35 @@ async def wallet_view(wallet: 'PiWallet', network: Literal["Mainnet", "Testnet",
                 color = COLOR
             )
         
-        case "Mainnet":
-            balance = await wallet.on_chain.get_mainnet_balance()
-            if balance != None:
-                embed = Embed(
-                    title = f"Wallet Pi Network - {network}",
-                    description = f"# {balance} π",
+        case "Mainnet" | "Testnet":
+            if wallet.on_chain:
+                try:
+                    balance = await (wallet.on_chain.get_mainnet_balance() if network == "Mainnet" else wallet.on_chain.get_testnet_balance())
+                    embed = Embed(
+                        title = f"Wallet Pi Network - {network}",
+                        description = f"# {balance} π",
+                        color = COLOR
+                    )
+                    
+                except:
+                    embed = Embed(
+                    title = "Wallet introuvable",
+                    description = f"Il n'y a pas de wallet {network} pour l'adresse commençant par {wallet.on_chain.address[0:5]}.",
                     color = COLOR
-                )
-                
+                )   
+                    
             else:
                 embed = Embed(
                     title = "Wallet introuvable",
-                    description = f"Il n'y a pas de wallet {network} pour cette l'adresse commençant par {wallet.address[0:5]}.",
-                    color = COLOR
-                )
-
-        case "Testnet":
-            balance = await wallet.on_chain.get_testnet_balance()
-            if balance != None:
-                embed = Embed(
-                    title = f"Wallet Pi Network - {network}",
-                    description = f"# {balance} π",
-                    color = COLOR
-                )
-                
-            else:
-                embed = Embed(
-                    title = "Wallet introuvable",
-                    description = f"Il n'y a pas de wallet {network} pour cette l'adresse commençant par {wallet.address[0:5]}.",
+                    description = f"Il n'y a pas de wallet {network} pour cette adresse.",
                     color = COLOR
                 )
     
+    user = client.get_user(wallet.id)
+    assert user
     embed.set_author(
-        name = client.get_user(wallet.id).display_name,
-        icon_url = client.get_user(wallet.id).display_avatar,
+        name = user.display_name,
+        icon_url = user.display_avatar,
     ).set_image(
         url = "attachment://wallet.png"
     )

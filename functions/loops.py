@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta, timezone
 import os
-from socket import timeout
 import traceback
-from discord import ButtonStyle, Embed, File
+from typing import Any, cast
+from discord import ButtonStyle, Embed, File, Guild, Message, Role, TextChannel
+import discord
 from discord.ui import Button, View
 from classes.discord_wallet import PiWallet
 from classes.item import CommunityItem
 from functions.utils import fetch, get_user_signin_channel, mark_as_done, read_file, write_file
-from init import BUYER_ROLE_ID, COLOR, GUILD_ID, MODE, SELLER_ROLE_ID, SERVER_NAME, WALLET_PI_FULCRAN, client, log
+from init import BUYER_ROLE_ID, COLOR, GUILD_ID, MODE, SELLER_ROLE_ID, SERVER_NAME, SHOP_CHANNEL_ID, WALLET_PI_FULCRAN, client, log
 from asyncio import sleep, CancelledError
 from modules.ckpool import get_miners
 from modules.pinet.classes import Wallet
@@ -61,150 +62,101 @@ async def loop_pi_deposit():
 
             #log.debug(f'Scanning {len(history)} transactions...')
             await sleep(2)
-            await sleep(2)
             for tx in history:
                 if not await tx.is_blacklist():
                     tx = await tx.payment
                     await sleep(5)
                     if tx.source != wallet_fulcran.address:
                         wallet = await PiWallet.add_to_wallet(tx.amount)
+                        await tx.blacklist()
                         if wallet:
-                            #log.info('Added', tx.amount, 'to wallet')
-                            await tx.blacklist()
                             user = client.get_user(wallet.id)
-                            guild = client.get_guild(GUILD_ID)
-                            member = guild.get_member(user.id)
-                            role_buyer = guild.get_role(BUYER_ROLE_ID)
-                            role_seller = guild.get_role(SELLER_ROLE_ID)
-                            if wallet.validation_amount == tx.amount and not wallet.is_verified and (wallet.address.upper() if wallet.address else None) == tx.source.address.upper():
-                                log.info("! VERIFIED !")
-                                await wallet.verify()
-                                #wallet.validation_amount = None
-                                try:
+                            if not user:
+                                continue #user not found, ignoring
 
-                                    match wallet.reason:
-                                        case 'deposit':
+                            guild = cast(Guild, client.get_guild(GUILD_ID))
+                            member = guild.get_member(user.id)
+                            role_buyer = cast(Role, guild.get_role(BUYER_ROLE_ID))
+                            role_seller = cast(Role, guild.get_role(SELLER_ROLE_ID))
+                            verified = await wallet.can_transaction_verify_wallet(tx)
+                            if verified:
+                                log.info("--=== VERIFIED ===--")
+                                await wallet.verify()
+
+                            try:
+                                match wallet.reason:
+                                    case 'deposit':
+                                        try:
                                             await user.send(
                                                 embed = Embed(
-                                                    title = "Votre profil a été validé !",
-                                                    description = f"Bonne nouvelle, votre profil Pi Network a été vérifié. Votre profil vérifié vous permet de participer au commerce Pi Network sur Discord. Désormais, vous pouvez vous inscrire en tant qu'acheteur ou vendeur sur le serveur {SERVER_NAME}.\nVous aves également reçu {tx.amount} Pi sur votre wallet Discord.\n\nRappel amical: BitBot ne vous demandera jamais votre passphrase. Restez vigilant, et méfiez vous du fishing.",
+                                                    title = "Confirmation de dépot",
+                                                    description = f'Vous avez déposé {tx.amount} Pi sur votre wallet Discord.{' Bonne nouvelle, votre profil Pi a été vérifié !' if verified else ''}',
                                                     color = COLOR
                                                 ).set_image(
-                                                    url = "attachment://pi_wallet2.png",
+                                                    url = 'attachment://banner.png'
                                                 ),
-                                                file = File("assets/pi_wallet2.png")
+                                                file = File("assets/pi_wallet2.png", 'banner.png')
                                             )
-                                    
-                                        case 'seller':
-                                            channel, message = await get_user_signin_channel(member)
+                                        
+                                        except discord.errors.Forbidden:
+                                            log.warn(f"🚫 Cannot DM {user.display_name} ({user.id})")
+
+                                
+                                    case 'seller' | 'buyer':
+                                        if not member:
+                                            log.warn(f"🏃‍♂️ User {user.display_name} ({user.id}) leaved guild")
+                                            continue # user leaved guild, ignoring
+
+                                        channel, message = await get_user_signin_channel(member)
+                                        if wallet.reason == 'seller':
+                                            role = role_seller
+                                            price = 5
+                                            embed = Embed(
+                                                title = "Confirmation d'inscription",
+                                                description = f"Félicitations, vous êtes inscrit en tant que **vendeur** sur {guild.name} ! Votre profil est désormais vérifié. Vous pouvez dès maintenant vendre des produits sur le serveur. Pour démarrer, utilisez la commande </ventes add:1327622946251866192> ici (en MP).\n En tant que vendeur, vous pouvez également acheter librement auprès d’autres vendeurs du serveur.",
+                                                color = COLOR
+                                            )
+                                        
+                                        else:
+                                            role = role_buyer
+                                            price = 2
+                                            embed = Embed(
+                                                title = "Confirmation d'inscription",
+                                                description = f"Félicitations, vous êtes inscrit en tant qu’**acheteur** sur {guild.name} ! Votre profil a est désormais vérifié. Vous pouvez dès maintenant acheter des produits sur le serveur. Rendez-vous sur le salon <#{SHOP_CHANNEL_ID}> et profitez de toutes les offres des vendeurs {guild.name}.",
+                                                color = COLOR
+                                            )
+
+                                        if channel and message:
                                             await mark_as_done(member)
                                             await message.delete()
                                             await channel.send(
-                                                embed = Embed(
-                                                    title = "Inscription confirmée !",
-                                                    description = f"Votre inscription en tant que vendeur a bien été prise en compte. Voici tout ce que vous pouvez faire de génial sur {SERVER_NAME} désormais:\n- Mettre en vente des produits\n- Créer des enchères\n- Acheter des produits vendus par la communauté\n- Acheter dans la boutique **Fulcran**\n- Participer aux enchères d'autres membres du serveur\n\nRappel amical: BitBot ne vous demandera jamais votre passphrase. Restez vigilant, et méfiez vous du fishing.",
-                                                    color = COLOR
-                                                ).set_footer(
+                                                embed = embed.set_footer(
                                                     text = "Ce salon sera supprimé automatiquement au bout de 10 minutes"
                                                 )
                                             )
-                                            await wallet.remove_pi(5)
-                                            await member.add_roles(role_seller)
                                         
-                                        case 'buyer':
-                                            channel, message = await get_user_signin_channel(member)
-                                            await mark_as_done(member)
-                                            await message.delete()
-                                            await channel.send(
-                                                    embed = Embed(
-                                                        title = "Inscription confirmée !",
-                                                        description = f"Votre inscription en tant qu'acheteur a bien été prise en compte. Vous pouvez désormais acheter sur le serveur et participer aux enchères sur le serveur !",
-                                                        color = COLOR
-                                                    ).set_footer(
-                                                        text = "Ce salon sera supprimé automatiquement au bout de 10 minutes"
-                                                    )
-                                                )
-                                            await wallet.remove_pi(2)
-                                            await member.add_roles(role_buyer)
-                                
-                                except:
-                                    log.warn(traceback.format_exc())
-                                    pass
-                            
-                            else:
-                                try:
-                                    match wallet.reason:
-                                        case "deposit":
-                                            await client.get_user(wallet.id).send(
-                                                embed = Embed(
-                                                    title = "Confirmation de dépot",
-                                                    description = f"Vous avez déposé {tx.amount} Pi sur votre wallet Pi Discord",
-                                                    color = COLOR
-                                                ).set_image(
-                                                    url = "attachment://pi_wallet2.png",
-                                                ),
-                                                file = File("assets/pi_wallet2.png")
-                                            )
-                                        
-                                        case "seller":
-                                            if wallet.validation_amount == tx.amount and wallet.address.upper() == tx.source.address.upper():
-                                                await mark_as_done(user)
-                                                await client.get_user(wallet.id).send(
-                                                    embed = Embed(
-                                                        title = "Inscription confirmée !",
-                                                        description = "Votre wallet Pi a été validé et votre inscription a bien été payée. Vous pouvez commencer à vendre sur le serveur !",
-                                                        color = COLOR
-                                                    )
-                                                )
-                                                channel, message = await get_user_signin_channel(member)
-                                                await message.delete()
-                                                await channel.send(
-                                                    embed = Embed(
-                                                        title = "Inscription confirmée !",
-                                                        description = f"Votre inscription en tant que vendeur a bien été prise en compte. Voici tout ce que vous pouvez faire de génial sur {SERVER_NAME} désormais:\n- Mettre en vente des produits\n- Créer des enchères\n- Acheter des produits vendus par la communauté\n- Acheter dans la boutique **Fulcran**\n- Participer aux enchères d'autres membres du serveur\n\nRappel amical: BitBot ne vous demandera jamais votre passphrase. Restez vigilant, et méfiez vous du fishing.",
-                                                        color = COLOR
-                                                    ).set_footer(
-                                                        text = "Ce salon sera supprimé automatiquement au bout de 10 minutes"
-                                                    )
-                                                )
-                                                await wallet.remove_pi(5)
-                                                await member.add_roles(role_seller)
+                                        else:
+                                            try:
+                                                await user.send(embed = embed)
                                             
-                                        case "buyer":
-                                            if wallet.validation_amount == tx.amount and wallet.address.upper() == tx.source.address.upper():
-                                                channel, message = await get_user_signin_channel(member)
-                                                await mark_as_done(member)
-                                                await message.delete()
-                                                await channel.send(
-                                                    embed = Embed(
-                                                        title = "Inscription confirmée !",
-                                                        description = f"Votre inscription en tant qu'acheteur a bien été prise en compte. Vous pouvez désormais acheter sur le serveur et participer aux enchères sur le serveur !",
-                                                        color = COLOR
-                                                    ).set_footer(
-                                                        text = "Ce salon sera supprimé automatiquement au bout de 10 minutes"
-                                                    )
-                                                )
-                                                await wallet.remove_pi(2)
-                                                await member.add_roles(role_buyer)
-                                        
-                                except:
-                                    log.warn(traceback.format_exc())
-                                    #log.debug('Cant mp')
-                                    pass
-                                #log.info("Not verified")
-                                pass
-                    
-                    else:
-                        #log.debug('Not a deposit')
-                        pass
+                                            except discord.errors.Forbidden:
+                                                pass
 
-                    await tx.blacklist()
+                                        if not role in member.roles:
+                                            await wallet.remove_pi(price)
+
+                                        await member.add_roles(role)
+                            
+                            except:
+                                log.warn("Unhandled error in dispatcher:", traceback.format_exc())
+                                pass
         
         except CancelledError:
+            log.info("Stopping loop...")
             break
         
         except:
-            log.warn(traceback.format_exc())
+            log.warn("Unhandled error in loop:", traceback.format_exc())
             
         finally:
             await sleep(15)
@@ -216,12 +168,17 @@ async def loop_onchain_tx():
         try:
             for sale_file in os.listdir("data/business/sales"):
                 try:
-                    item = CommunityItem(**await read_file(f"business/sales/{sale_file}"))
+                    item = await CommunityItem.from_id(sale_file.split(".")[0])
+                    assert item
                     if not await item.message:
                         continue # skip item
 
                     seller_wallet = await PiWallet.from_user(item.seller_id)
+                    assert seller_wallet
+
                     onchain_wallet = seller_wallet.on_chain
+                    if not onchain_wallet:
+                        continue # Could be None if address is removed
                 
                 except:
                     log.warn("Unable to read sale file or load seller wallet")
@@ -251,13 +208,13 @@ async def loop_onchain_tx():
                                     wallet = await PiWallet.from_file(f"wallets/pi/{wallet_file}")
                                     if wallet.address == payment.source.address:
                                         log.info(f"buyer found {wallet.id}")
-                                        guild = client.get_guild(GUILD_ID)
+                                        guild = cast(Guild, client.get_guild(GUILD_ID))
                                         member = guild.get_member(wallet.id)
+                                        assert member
                                         if item.sell_type == "unique":
                                             message = await item.message
                                             if message:
-                                                button: Button = message.components[0].children[0]
-                                                new_button = Button()
+                                                button: Button = message.components[0].children[0] #type: ignore
                                                 new_button = Button()
                                                 new_button.label = button.label
                                                 new_button.emoji = button.emoji
@@ -265,10 +222,12 @@ async def loop_onchain_tx():
                                                 new_button.disabled = True
                                                 new_button.style = ButtonStyle.gray
                                                 await message.edit(
-                                                    view = View(timeout).add_item(new_button)
+                                                    view = View().add_item(new_button)
                                                 )
 
                                         await payment.notify()
+                                        assert item.seller
+                                        assert client.user
                                         await item.seller.send(
                                             embed = Embed(
                                                 title = "Un paiement a été trouvé sur la blockchain",
@@ -306,7 +265,6 @@ async def loop_onchain_tx():
             break
 
         except:
-            log.warn(sale_file)
             log.warn(traceback.format_exc())
 
         finally:
@@ -316,12 +274,16 @@ async def loop_delete_channel():
     log.info("Ready")
     while True:
         try:
-            let = {}
-            for user_id, channel_data in (await read_file("business/signin_channels.json")).items():
+            let: dict[str, dict[str, Any]] = {}
+            data = cast(dict[str, dict[str, int]], await read_file("business/signin_channels.json"))
+            for user_id, channel_data in data.items():
                 end_date: int = channel_data.get("done", 0)
                 if end_date: # Expired channel, deleting
                     try:
-                        channel = client.get_channel(channel_data.get("channel_id"))
+                        channel = cast(TextChannel, client.get_channel(channel_data.get("channel_id", 0)))
+                        if not channel:
+                            continue
+                        
                         if datetime.fromtimestamp(end_date) + timedelta(minutes = 10) < datetime.now() :
                             await channel.delete(reason = "Inscription terminée")
                         
