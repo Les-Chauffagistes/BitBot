@@ -8,7 +8,7 @@ from init import BUYER_ROLE_ID, GUILD_ID, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY
 from discord import channel
 from discord.utils import get
 
-async def read_file(name: str) -> Union[str, list, dict[str, int | str | bool | dict]]:
+async def read_file(name: str) -> str | list[int | float | str | bool] | dict[str, int | str | bool | dict[str, int | float | str | bool]]:
     """
     Read file in data directory
     """
@@ -72,15 +72,20 @@ def is_buyer(user: User | Member) -> bool:
     
     return guild.get_role(BUYER_ROLE_ID) in user.roles
     
-async def get_user_signin_channel(user: Member) -> tuple[channel.TextChannel, Message] | tuple[None, None]:
+async def get_user_signin_channel(user: Member | User) -> tuple[channel.TextChannel, Message] | tuple[None, None]:
     data = cast(dict[str, dict[str, int]], await read_file("business/signin_channels.json"))
-    channel_id = data.get(str(user.id), {}).get("channel_id", 0)
-    message_id = data.get(str(user.id), {}).get("message_id", 0)
+    channel_id = data.get(str(user.id), {}).get("channel_id")
+    message_id = data.get(str(user.id), {}).get("message_id")
     try:
-        if channel_id:
+        if channel_id and message_id:
             channel = cast(TextChannel | None, client.get_channel(channel_id))
             if channel:
-                return (channel, await channel.fetch_message(message_id))
+                try:
+                    message = await channel.fetch_message(message_id)
+                    return channel, message
+                
+                except:
+                    return None, None
             
         return None, None
 

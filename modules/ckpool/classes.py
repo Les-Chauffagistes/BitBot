@@ -72,7 +72,7 @@ class Miner:
         return format_dt(now - timedelta(seconds = elapsed_time), 'R')
     
     @classmethod
-    async def get_miner_info(cls) -> list['Miner'] | None:
+    async def get_miner_info(cls) -> list['Miner']:
         soup = await make_request(f"/users/{POOL_ID}")
         table = soup.find('table', {'class': 'table w-full table-sm sm:table-md'})
         if isinstance(table, Tag):
@@ -95,6 +95,8 @@ class Miner:
                     data.append(Miner(row_data))
 
             return data
+    
+        return []
 
     @property
     async def shares(self):

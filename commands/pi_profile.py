@@ -1,6 +1,6 @@
 import traceback
 from typing import Literal, Optional
-from discord import ButtonStyle, Embed, File, Interaction, TextStyle, User
+from discord import ButtonStyle, Embed, File, Interaction, Member, TextStyle, User
 from discord.app_commands import Group
 from classes.discord_wallet import PiWallet
 from discord.ui import Modal, TextInput, View, Button
@@ -43,10 +43,11 @@ async def editCommand(interaction: Interaction):
         )
         modal.add_item(raw_address).add_item(raw_locale)
         async def on_profile_update(interaction2: Interaction):
+            log.debug("updating profile...")
             try:
                 if wallet:
                     wallet.locale = raw_locale.value.strip()
-                    if (wallet.address != raw_address.value.strip()) and (raw_address.value.strip() != ""):
+                    if (wallet.address != raw_address.value.strip()) and (raw_address.value.strip() != ""): # Address modified but not deleted
                         wallet.address = raw_address.value.strip()
                         await wallet.unverify()
                         embed, view = await wallet.start_validation()
@@ -57,8 +58,11 @@ async def editCommand(interaction: Interaction):
                         )
 
                     else:
+                        if raw_address.value.strip() == "":
+                            wallet.address = None
+
                         await wallet.save()
-                        if wallet.is_verified:
+                        if wallet.is_verified or wallet.address is None:
                             await interaction2.response.send_message(
                                 embed = Embed(
                                     title = "Informations mises à jour",
@@ -71,7 +75,7 @@ async def editCommand(interaction: Interaction):
                              await interaction2.response.send_message(
                                 embed = Embed(
                                     title = "Informations mises à jour",
-                                    description = f"Les informations de votre profil ont bien été mises à jour.\nSouhaitez vous reprendre la validation de votre profil ? Cela nous permet de vérifier que l'adresse commençant par {wallet.address[0:5]} est bien la votre. La vérification est requise pour acheter ou vendre sur ce serveur.",
+                                    description = f"Les informations de votre profil ont bien été mises à jour.\nSouhaitez vous reprendre la validation de votre profil ? Cela nous permet de vérifier que l'adresse commençant par `{wallet.address[0:5]}` est bien la votre. La vérification est requise pour acheter ou vendre sur ce serveur.",
                                     color = COLOR
                                 ),
                                 view = View(timeout = None).add_item(
@@ -86,6 +90,7 @@ async def editCommand(interaction: Interaction):
                              
                 else:
                     new_wallet = await PiWallet.create_new(interaction.user, raw_address.value.strip(), raw_locale.value.strip())
+                    assert new_wallet
                     embed, view = await new_wallet.start_validation()
                     await interaction2.response.send_message(
                         embed = embed,
@@ -94,7 +99,14 @@ async def editCommand(interaction: Interaction):
                     )
                         
             except:
-                log.warn(traceback.format_exc())
+                await interaction2.response.send_message(
+                    embed = Embed(
+                        title = "Adresse invalide",
+                        description = "L'adresse que vous avez fournie n'est pas une adresse de wallet Pi.",
+                        color = COLOR
+                    ),
+                    ephemeral = True
+                )
 
         modal.on_submit = on_profile_update
         await interaction.response.send_modal(modal)
@@ -106,7 +118,7 @@ async def editCommand(interaction: Interaction):
     name = "show",
     description = "Affiche un profil Pi Network"
 )
-async def showCommand(interaction: Interaction, membre: Optional[User]):
+async def showCommand(interaction: Interaction, membre: Optional[User | Member]):
     try:
         if not membre:
             membre = interaction.user

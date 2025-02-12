@@ -143,7 +143,7 @@ async def interact(interaction: Interaction, id: str, values: list[str]):
                                 ),
                                 view = None
                             )
-                            await client.get_channel(ADMIN_NOTIFICATIONS_CHANNEL_ID).send(
+                            await client.get_channel(ADMIN_NOTIFICATIONS_CHANNEL_ID).send( # type: ignore
                                 embed = Embed(
                                     title = "Achat automatique effectué",
                                     description = f"{interaction.user.display_name} a acheté **{card.name}** de l'enseigne {brand.name} pour **{card.current_price} π**.\n\nCode d'activation fourni: `{code}`\nN° de commande: {interaction.id}",

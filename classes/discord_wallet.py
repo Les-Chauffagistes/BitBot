@@ -1,9 +1,11 @@
+from importlib.util import source_from_cache
 import os
+import re
 from typing import Literal, Optional, TypedDict, cast
 from discord import Embed, Member, User
 from classes.emoji import Emoji
 from functions.utils import read_file, write_file
-from modules.pinet.classes import Wallet
+from modules.pinet.classes import Payment, Wallet
 from views.pi_wallet import deposit_view, pay_buyer, pay_seller, validation_view
 from init import ADMIN_NOTIFICATIONS_CHANNEL_ID, COLOR, GUILD_ID, log, client
 from discord.ui import View, Button
@@ -30,14 +32,30 @@ class PiWallet(BaseDiscordWallet):
     class FundsError(BaseError):
         pass
 
-    __slots__ = BaseDiscordWallet.__slots__ + ('payments_ids', 'address', 'locale', 'reason')
+    __slots__ = BaseDiscordWallet.__slots__ + ('payments_ids', '_address', 'locale', 'reason')
 
-    def __init__(self, user_id: int, badges: list[str], balance: float, address: str | None, validation_amount: Optional[float], payments_ids: list[int], locale: str, reason: Literal['deposit', 'seller', 'buyer']):
+    def __init__(self, user_id: int, badges: list[str], balance: float, address: Optional[str], validation_amount: Optional[float], payments_ids: list[int], locale: str, reason: Literal['deposit', 'seller', 'buyer']):
         super().__init__(user_id, badges, balance, validation_amount)
         self.payments_ids = payments_ids
         self.address = address
         self.locale = locale
         self.reason: Literal['deposit', 'seller', 'buyer'] = reason
+    
+    @property
+    def address(self):
+        return self._address.upper() if self._address else None
+    
+    @address.setter
+    def address(self, address: Optional[str]):
+        if not address:
+            self._address = None
+            return
+        
+        address = address.upper().strip()
+        if not re.match(r'^G[A-Z0-9]{55}$', address):
+            raise ValueError(f'{address} is an invalid PiNet address')
+        
+        self._address = address
 
     async def check_digits(self, digits: int):
         """Renvoie true si les digits sont disponibles, false sinon"""
@@ -57,7 +75,7 @@ class PiWallet(BaseDiscordWallet):
         return digits
 
     async def start_validation(self):
-        if not self.validation_amount:
+        if not self.validation_amount or self.validation_amount > 2:
             digits = await self.find_digits()
             self.validation_amount = 1 + digits / 1_000_000
             self.reason = "deposit"
@@ -72,14 +90,15 @@ class PiWallet(BaseDiscordWallet):
     async def send(self, amount: int, to: 'PiWallet'):
         if amount > 0:
             if self.balance >= amount:
+                if self.id == to.id:
+                    to = self
+                
                 try:
                     self.balance -= amount
                     await self.save()
                 
                 except:
                     raise Exception
-                
-                to = await self.from_user(to.id)
                 
                 try:
                     await to.add_pi(amount)
@@ -90,13 +109,26 @@ class PiWallet(BaseDiscordWallet):
                     raise Exception
             
             else:
-                raise self.FundsError
+                raise self.FundsError("not enough funds")
         
         else:
-            raise ValueError
+            raise ValueError("amount must be > 1")
+        
+    @property
+    def json(self):
+        return {
+            'id': self.id,
+            'badges': self.badges,
+            'balance': self.balance,
+            'validation_amount': self.validation_amount,
+            'payments_ids': self.payments_ids,
+            'address': self.address,
+            'locale': self.locale,
+            'reason': self.reason
+        }
 
     async def save(self):
-        data = {k: getattr(self, k) for k in self.__slots__}
+        data: dict = self.json
         try:
             await write_file(f'wallets/pi/{self.id}.json', data)
 
@@ -114,14 +146,16 @@ class PiWallet(BaseDiscordWallet):
 
     async def start_withdrawal(self, amount: int):
         await self.remove_pi(amount)
-        await client.get_channel(ADMIN_NOTIFICATIONS_CHANNEL_ID).send(
+        member = client.get_guild(GUILD_ID).get_member(self.id) #type: ignore
+
+        await client.get_channel(ADMIN_NOTIFICATIONS_CHANNEL_ID).send( # type: ignore
             embed = Embed(
                 title = "Demande de retrait",
                 description = f"L'utilisateur demande le retrait de **{amount} π** sur son wallet.\n```{self.address}```",
                 color = COLOR
             ).set_author(
-                name = client.get_guild(GUILD_ID).get_member(self.id).display_name,
-                icon_url = client.get_guild(GUILD_ID).get_member(self.id).display_avatar.url
+                name = member.display_name if member else None,
+                icon_url = member.display_avatar.url if member else None
             ),
             view = View(timeout = None).add_item(
                 Button(
@@ -175,7 +209,7 @@ class PiWallet(BaseDiscordWallet):
         id: int
         badges: list[str]
         balance: float
-        address: str
+        address: str | None
         validation_amount: Optional[float]
         payments_ids: list[int]
         locale: str
@@ -196,7 +230,7 @@ class PiWallet(BaseDiscordWallet):
         )
 
     @classmethod
-    async def add_to_wallet(cls, amount: float):
+    async def add_to_wallet(cls, amount: float) -> 'PiWallet | None':
         #log.debug(f"Searching {amount}...")
         payments_ids = cast(dict[str, str], await read_file('wallets/pi_pending_payments.json'))
         if str(amount) in payments_ids:
@@ -283,3 +317,16 @@ class PiWallet(BaseDiscordWallet):
     @property
     def is_trusted(self):
         return "trusted" in self.badges
+    
+    async def can_transaction_verify_wallet(self, payment: Payment) -> bool:
+        """If transaction is a deposit with the correct amount and address for an user (not already verified), returns true, else returns false
+        
+        It did not check if tx is blacklisted"""
+        if self.address and not self.is_verified:
+            if (
+                self.validation_amount == payment.amount and
+                self.address == payment.source.address
+            ):
+                return True
+
+        return False

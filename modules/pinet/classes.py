@@ -1,16 +1,19 @@
-from typing import Literal
+from typing import Any, Literal, cast
 from . import api
 from datetime import datetime
 
 from functions.utils import read_file, write_file
 
 class Transaction:
-    def __init__(self, data: dict, wallet: 'Wallet', network: Literal['testnet', 'mainnet']):
-        self.hash = data.get("hash")
-        self.source = Wallet(data.get("source"))
-        self._network_ = network
+    def __init__(self, data: dict[str, Any], wallet: 'Wallet', network: Literal['testnet', 'mainnet']):
+        self.hash: str = data.get("hash", '')
+        self.source = Wallet(data.get("source", ''))
+        self.__network = network
         self.wallet = wallet
-        self.hash = data.get('hash')
+    
+    @property
+    def network(self):
+        return cast(Literal['testnet', 'mainnet'], self.__network)
     
     async def is_blacklist(self) -> bool:
         return await Wallet.is_blacklisted(self)
@@ -20,24 +23,22 @@ class Transaction:
     
     @property
     async def payment(self):
-        r = (await api.request(f"/transactions/{self.hash}/operations", 'get', self._network_))
+        r = (await api.request(f"/transactions/{self.hash}/operations", 'get', self.network))
         return Payment(
-            r.get("_embedded", {}).get("records", [])[0],
-            self
+            r.get("_embedded", {}).get("records", [])[0]
         )
 
 class Payment:
-    def __init__(self, data: dict, wallet: 'Wallet'):
+    def __init__(self, data: dict[str, Any]):
         self.id = data.get("id")
-        self.success: bool = data.get('transaction_successful')
-        self.source = Wallet(data.get("source_account"))
-        self.destination = Wallet(data.get("to"))
-        self.amount = float(data.get("amount")) if data.get("amount") else 0
-        self.type: Literal['payment'] = data.get("type")
-        self.date = datetime.strptime(data.get('created_at'), "%Y-%m-%dT%H:%M:%SZ")
-        self.hash: str = data.get("transaction_hash")
-        self.asset: Literal['native'] = data.get("asset_type")
-        self.wallet = wallet
+        self.success: bool = data.get('transaction_successful', False)
+        self.source = Wallet(data.get("source_account", ''))
+        self.destination = Wallet(data.get("to", ''))
+        self.amount = float(data.get("amount", 0))
+        self.type: Literal['payment'] = data.get("type", 'payment')
+        self.date = datetime.strptime(data.get('created_at', ''), "%Y-%m-%dT%H:%M:%SZ")
+        self.hash: str = data.get("transaction_hash", '')
+        self.asset: Literal['native'] = data.get("asset_type", 'native')
     
     async def is_blacklist(self) -> bool:
         return await Wallet.is_blacklisted(self)
@@ -56,7 +57,11 @@ class Payment:
 
 class Wallet:
     def __init__(self, address: str):
-        self.address = address
+        self._address = address
+    
+    @property
+    def address(self):
+        return self._address.upper()
     
     async def get_testnet_balance(self) -> float:
         """Renvoie le montant en Pi Tesntet de l'utilisateur. Renvoie None si pas de wallet"""
@@ -86,21 +91,25 @@ class Wallet:
                 )).get("_embedded", {}).get('records', [])
             ]
 
-    async def is_blacklisted(payment: Payment) -> bool:
-        blacklisted: list[str] = await read_file("wallets/pi_blacklist_payments.json")
+    @staticmethod
+    async def is_blacklisted(payment: Payment | Transaction) -> bool:
+        blacklisted = cast(list[str], await read_file("wallets/pi_blacklist_payments.json"))
         return payment.hash in blacklisted
     
-    async def blacklist(payment: Payment):
-        blacklisted: list[str] = await read_file("wallets/pi_blacklist_payments.json")
+    @staticmethod
+    async def blacklist(payment: Payment | Transaction):
+        blacklisted = cast(list[str], await read_file("wallets/pi_blacklist_payments.json"))
         blacklisted.append(payment.hash)
         await write_file("wallets/pi_blacklist_payments.json", blacklisted)
     
-    async def is_notified(payment: Payment):
-        notified: list[str] = await read_file("wallets/pi_notified_payments.json")
+    @staticmethod
+    async def is_notified(payment: Payment | Transaction):
+        notified = cast(list[str], await read_file("wallets/pi_notified_payments.json"))
         return payment.hash in notified
     
+    @staticmethod
     async def notify(payment: Payment):
-        notified: list[str] = await read_file("wallets/pi_notified_payments.json")
+        notified = cast(list[str], await read_file("wallets/pi_notified_payments.json"))
         notified.append(payment.hash)
         await write_file("wallets/pi_notified_payments.json", notified)
 
