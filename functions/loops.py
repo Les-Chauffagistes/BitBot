@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 import os
 import traceback
 from typing import Any, cast
+from aiohttp import ClientSession
 from discord import ButtonStyle, Embed, File, Guild, Message, Role, TextChannel
 import discord
 from discord.ui import Button, View
@@ -307,3 +308,28 @@ async def loop_delete_channel():
 
         finally:
             await sleep(15)
+    
+async def loop_status():
+    log.info("Ready")
+    while True:
+        try:
+        
+            async with ClientSession() as session:
+                async with session.get('https://swakraft.hopto.org/api/bitcoin-price') as response:
+                    price: str = f"{(await response.json())["EUR"]:,}".replace(",", " ")
+
+            await client.change_presence(
+                activity = discord.Activity(
+                    type = discord.ActivityType.watching,
+                    name = f"₿ à {price} €"
+                )
+            )
+        
+        except CancelledError:
+            break
+
+        except:
+            log.warn(traceback.format_exc())
+
+        finally:
+            await sleep(60)
