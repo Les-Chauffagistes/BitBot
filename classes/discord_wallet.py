@@ -1,4 +1,3 @@
-from importlib.util import source_from_cache
 import os
 import re
 from typing import Literal, Optional, TypedDict, cast
@@ -11,34 +10,34 @@ from init import ADMIN_NOTIFICATIONS_CHANNEL_ID, COLOR, GUILD_ID, log, client
 from discord.ui import View, Button
 
 class BaseDiscordWallet:
-    __slots__ = ('id', 'badges', 'balance', 'validation_amount')
+    __slots__ = ('id', 'balance')
 
-    def __init__(self, user_id: int, badges: list[str], balance: float, validation_amount: Optional[float]) -> None:
+    def __init__(self, user_id: int, balance: float) -> None:
         self.id = user_id
-        self.badges = badges
         self.balance = balance
-        self.validation_amount = validation_amount
 
     async def save(self):
         raise NotImplementedError
 
     def start_validation(self):
         raise NotImplementedError
-
-class PiWallet(BaseDiscordWallet):
+    
     class BaseError(Exception):
         pass
 
     class FundsError(BaseError):
         pass
 
-    __slots__ = BaseDiscordWallet.__slots__ + ('payments_ids', '_address', 'locale', 'reason')
+class PiWallet(BaseDiscordWallet):
+    __slots__ = BaseDiscordWallet.__slots__ + ('payments_ids', '_address', 'locale', 'reason', 'badges', 'validation_amount')
 
     def __init__(self, user_id: int, badges: list[str], balance: float, address: Optional[str], validation_amount: Optional[float], payments_ids: list[int], locale: str, reason: Literal['deposit', 'seller', 'buyer']):
-        super().__init__(user_id, badges, balance, validation_amount)
+        super().__init__(user_id, balance)
         self.payments_ids = payments_ids
         self.address = address
         self.locale = locale
+        self.badges = badges
+        self.validation_amount = validation_amount
         self.reason: Literal['deposit', 'seller', 'buyer'] = reason
     
     @property
@@ -330,3 +329,69 @@ class PiWallet(BaseDiscordWallet):
                 return True
 
         return False
+    
+class BitcoinWallet(BaseDiscordWallet):
+
+    __slots__ = ('_user_id', '_balance')
+
+    def __init__(self, id: int, balance: int) -> None:
+        self._user_id = id
+        self._balance = balance
+    
+    @property
+    def balance(self):
+        return self._balance
+    
+    @property
+    def user_id(self):
+        return self._user_id
+    
+    class types(TypedDict):
+        id: int
+        balance: int
+    
+    @classmethod
+    async def from_file(cls, file: str):
+        data = cast(BitcoinWallet.types, await read_file(file))
+        return cls(**data)
+    
+    @classmethod
+    async def _new(cls, for_user: int):
+        wallet = cls(for_user, 0)
+        await wallet.save()
+        return wallet
+    
+    @classmethod
+    async def from_user_id(cls, user_id: int):
+        """Returns the user's wallet. Create a new one if it doesn't exist"""
+        for wallet_file in os.listdir('data/wallets/bitcoin'):
+            if wallet_file.startswith(str(user_id)):
+                return await cls.from_file(f"wallets/bitcoin/{wallet_file}")
+        
+        else:
+            return await cls._new(user_id)
+    
+    @property
+    def json(self):
+        return {
+            "id": self._user_id,
+            "balance": self._balance
+        }
+            
+    async def save(self):
+        await write_file(f"wallets/bitcoin/{self._user_id}.json", self.json)
+    
+    async def add_sat(self, amount: int):
+        assert amount > 0
+        self._balance += amount
+        await self.save()
+        return self
+
+    async def remove_sat(self, amount: int):
+        assert amount > 0
+        if self._balance < amount:
+            raise self.FundsError
+        
+        self._balance -= amount
+        await self.save()
+        return self

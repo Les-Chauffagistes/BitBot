@@ -1,19 +1,17 @@
-from datetime import datetime, timedelta, timezone
-import os
-import traceback
+import os, traceback
+from datetime import datetime, timedelta
 from typing import Any, cast
 from aiohttp import ClientSession
-from discord import ButtonStyle, Embed, File, Guild, Message, Role, TextChannel
-import discord
+from discord import ButtonStyle, Embed, Guild, Role, TextChannel, Activity, ActivityType
+from discord.errors import Forbidden
 from discord.ui import Button, View
 from classes.discord_wallet import PiWallet
 from classes.item import CommunityItem
 from functions.utils import fetch, get_user_signin_channel, mark_as_done, read_file, write_file
-from init import BUYER_ROLE_ID, COLOR, GUILD_ID, MODE, SELLER_ROLE_ID, SERVER_NAME, SHOP_CHANNEL_ID, WALLET_PI_FULCRAN, client, log
+from init import BUYER_ROLE_ID, COLOR, GUILD_ID, MODE, SELLER_ROLE_ID, SHOP_CHANNEL_ID, WALLET_PI_FULCRAN, client, log, storage
 from asyncio import sleep, CancelledError
 from modules.ckpool import get_miners
 from modules.pinet.classes import Wallet
-import discord.utils as utils
 
 log.info("Creating tasks")
 
@@ -94,12 +92,11 @@ async def loop_pi_deposit():
                                                     description = f'Vous avez déposé {tx.amount} Pi sur votre wallet Discord.{' Bonne nouvelle, votre profil Pi a été vérifié !' if verified else ''}',
                                                     color = COLOR
                                                 ).set_image(
-                                                    url = 'attachment://banner.png'
-                                                ),
-                                                file = File("assets/pi_wallet2.png", 'banner.png')
+                                                    url = 'https://swakraft.hopto.org/assets/pi_wallet2'
+                                                )
                                             )
                                         
-                                        except discord.errors.Forbidden:
+                                        except Forbidden:
                                             log.warn(f"🚫 Cannot DM {user.display_name} ({user.id})")
 
                                 
@@ -140,7 +137,7 @@ async def loop_pi_deposit():
                                             try:
                                                 await user.send(embed = embed)
                                             
-                                            except discord.errors.Forbidden:
+                                            except Forbidden:
                                                 pass
 
                                         if not role in member.roles:
@@ -152,7 +149,7 @@ async def loop_pi_deposit():
                                 log.warn("Unhandled error in dispatcher:", traceback.format_exc())
                                 pass
         
-        except CancelledError:
+        except CancelledError | GeneratorExit:
             log.info("Stopping loop...")
             break
         
@@ -308,19 +305,38 @@ async def loop_delete_channel():
 
         finally:
             await sleep(15)
-    
-async def loop_status():
+
+async def loop_bitcoin_price():
     log.info("Ready")
     while True:
         try:
-        
             async with ClientSession() as session:
                 async with session.get('https://swakraft.hopto.org/api/bitcoin-price') as response:
-                    price: str = f"{(await response.json())["EUR"]:,}".replace(",", " ")
+                    price: int = (await response.json())['EUR']
 
+                    storage.bitcoin_price = price
+        
+        except CancelledError:
+            break
+
+        except:
+            log.warn(traceback.format_exc())
+
+        finally:
+            await sleep(60)
+    
+async def loop_status():
+    log.info("Ready, waiting...")
+    while not storage.bitcoin_price:
+        await sleep(0.1)
+
+    log.info("Got price")
+    while True:
+        try:
+            price: str = f"{storage.bitcoin_price:,}".replace(",", " ")
             await client.change_presence(
-                activity = discord.Activity(
-                    type = discord.ActivityType.watching,
+                activity = Activity(
+                    type = ActivityType.watching,
                     name = f"₿ à {price} €"
                 )
             )

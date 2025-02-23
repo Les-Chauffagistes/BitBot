@@ -69,7 +69,6 @@ class Line:
         self._color_code = '38;5;202'
         self._edit()
 
-
 class Logger:
     def __init__(self):
         self.curent_line = 0
