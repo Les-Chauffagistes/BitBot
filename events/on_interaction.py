@@ -1,7 +1,8 @@
 import traceback
 from init import client, log
 from discord import Interaction
-from interactions_bus import utils, community_business, wallet, admin_business, user_business
+from interactions_bus import bitcoin, utils, community_business, wallet, admin_business, user_business
+from asyncio import gather
 
 log.info("Registered on_interaction")
 
@@ -25,9 +26,6 @@ async def on_interaction(interaction: Interaction):
             log.warn(traceback.format_exc())
 
 async def interact(interaction: Interaction, id: str, values: list[str]):
-    log.info(interaction.user.display_name, id)
-    await utils.interact(interaction, id, values)
-    await wallet.interact(interaction, id, values)
-    await community_business.interact(interaction, id, values)
-    await admin_business.interact(interaction, id, values)
-    await user_business.interact(interaction, id, values)
+    log.debug(interaction.user.display_name, id)
+    buses = [utils, wallet, community_business, admin_business, user_business, bitcoin]
+    await gather(*[bus.interact(interaction, id, values) for bus in buses])

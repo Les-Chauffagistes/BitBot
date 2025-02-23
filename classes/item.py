@@ -1,6 +1,6 @@
 import os
 from typing import Literal, Optional, TypedDict, cast
-from functions.utils import fetch, read_file, write_file
+from functions.utils import read_file, write_file
 from init import client
 from discord import Message, TextChannel
 from init import log

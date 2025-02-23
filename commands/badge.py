@@ -1,6 +1,5 @@
 from discord import Embed, Interaction, Member, Permissions
 from discord.app_commands import Group
-
 from classes.discord_wallet import PiWallet
 from init import BADGE, COLOR
 

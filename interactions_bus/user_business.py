@@ -1,9 +1,7 @@
-from discord import ChannelType, Embed, Interaction
-
+from discord import Embed, Interaction
 from classes.brand import Brand
 from classes.commands import Command
 from classes.discord_wallet import PiWallet
-from commands import commands
 from init import ADMIN_NOTIFICATIONS_CHANNEL_ID, COLOR, client, log
 from views.user_business import card_view, main_brand_view, main_shop_view, payment_confirm
 

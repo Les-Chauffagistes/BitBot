@@ -1,10 +1,9 @@
 import traceback
-from typing import Literal, Optional
-from discord import ButtonStyle, Embed, File, Interaction, Member, TextStyle, User
+from typing import Optional
+from discord import ButtonStyle, Embed, Interaction, Member, TextStyle, User
 from discord.app_commands import Group
 from classes.discord_wallet import PiWallet
 from discord.ui import Modal, TextInput, View, Button
-from discord.utils import MISSING
 from classes.emoji import Emoji
 from init import COLOR, log
 
@@ -136,9 +135,8 @@ async def showCommand(interaction: Interaction, membre: Optional[User | Member])
                         icon_url = membre.display_avatar.url
                     ).set_footer(
                         text = "Vendeur de confiance" if wallet.is_trusted else "Vérifié" if wallet.is_verified else None,
-                        icon_url = "attachment://trusted.png" if wallet.is_trusted else "attachment://verified.png" if wallet.is_verified else ""
-                    ),
-                    file = File("assets/trusted.png") if wallet.is_trusted else File("assets/verified.png") if wallet.is_verified else MISSING
+                        icon_url = "https://swakraft.hopto.org/assets/trusted" if wallet.is_trusted else "https://swakraft.hopto.org/assets/verified" if wallet.is_verified else ""
+                    )
                 )
                 return
 

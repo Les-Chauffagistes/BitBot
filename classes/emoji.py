@@ -25,6 +25,10 @@ class Emoji(Enum):
     add = "<:add:1337810147656863806>"
     code = "<:passcode:1338478704749314121>"
     message = "<:message:1338514047514972201>"
+    json = "<:json:1342494059125801103>"
+    sat = "<:sat:1271569357935345715>"
+
+    loading = "<a:loading:1342494752985190564>"
 
     def __str__(self):
         return self.value

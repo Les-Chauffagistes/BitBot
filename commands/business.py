@@ -1,7 +1,6 @@
 import traceback
 from discord import Interaction
 from discord.app_commands import Group, AppCommandContext
-from discord.utils import MISSING
 from classes.brand import Brand
 from functions.utils import is_manager
 from responses.default import missing_permission
