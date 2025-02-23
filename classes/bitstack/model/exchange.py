@@ -1,4 +1,4 @@
-from classes.bitstack.modele.operation import Operation
+from classes.bitstack.model.operation import Operation
 
 class Exchange(Operation):
     """Represents an Exchange operation on BitStack"""
@@ -7,6 +7,6 @@ class Exchange(Operation):
 
     def __init__(self, date: str, fuseau: str, bitcoin_received: str, description: str, bitcoin_price: str, id: str, fees: str, fiat_sent: str):
         super().__init__(date, fuseau, description, bitcoin_price, id)
-        self.fees = fees
-        self.fiat_sent = fiat_sent
-        self.bitcoin_received = bitcoin_received
+        self.fees = float(fees)
+        self.fiat_sent = float(fiat_sent)
+        self.bitcoin_received = float(bitcoin_received)

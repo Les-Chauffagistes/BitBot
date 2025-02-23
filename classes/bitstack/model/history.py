@@ -1,11 +1,11 @@
-from classes.bitstack.modele.operation import Operation
-from classes.bitstack.modele.deposit import Deposit
-from classes.bitstack.modele.exchange import Exchange
+from datetime import datetime
+from classes.bitstack.model.operation import Operation
+from classes.bitstack.model.deposit import Deposit
+from classes.bitstack.model.exchange import Exchange
 
-import csv
 from aiohttp import ClientSession
-
-from classes.bitstack.modele.withdraw import Withdraw
+from classes.bitstack.model.withdraw import Withdraw
+import csv
 
 class History:
     """BitStack operations history"""
@@ -78,40 +78,84 @@ class History:
                 return data['EUR']
     
     @property
-    async def bitcoin_buyed(self):
+    async def bitcoin_buyed(self) -> float:
         bitcoin_received = 0
         for operation in self.operations:
             if isinstance(operation, (Exchange, Deposit)):
-                bitcoin_received += float(operation.bitcoin_received)
+                bitcoin_received += operation.bitcoin_received
         
         return bitcoin_received
 
     @property
-    async def fiat_sent(self):
+    async def fiat_sent(self) -> float:
         fiat_sent = 0
         for operation in self.operations:
             if isinstance(operation, Exchange):
-                fiat_sent += float(operation.fiat_sent)
+                fiat_sent += operation.fiat_sent
         
         return fiat_sent
     
     @property
     async def wallet_value(self) -> float:
         return await History.current_bitcoin_price() * await self.bitcoin_buyed
+    
+    @property
+    def average_buy_price(self) -> float:
+        prices: list[float] = []
+        quantities: list[float] = []
+        for operation in self.operations:
+            if isinstance(operation, (Exchange, Deposit)):
+                prices.append(operation.bitcoin_price)
+                quantities.append(operation.bitcoin_received)
+
+        return sum((prices[i] * quantities[i] for i in range(len(prices)))) / sum(quantities)
 
     @property
-    async def ROI(self):
+    async def instant_ROI(self):
         bitcoin_received = 0
         fiat_sent = 0
         for operation in self.operations:
             if isinstance(operation, Exchange):
-                bitcoin_received += float(operation.bitcoin_received)
-                fiat_sent += float(operation.fiat_sent)
+                bitcoin_received += operation.bitcoin_received
+                fiat_sent += operation.fiat_sent
 
             elif isinstance(operation, Deposit):
-                bitcoin_received += float(operation.bitcoin_received)
+                bitcoin_received += operation.bitcoin_received
             
             elif isinstance(operation, Withdraw):
                 pass
                 
         return (bitcoin_received * await History.current_bitcoin_price()) / fiat_sent - 1
+    
+    @property
+    def start_date(self) -> datetime: # type: ignore
+        for operation in self.operations:
+            if isinstance(operation, (Exchange, Deposit)):
+                return datetime.fromisoformat(operation.date)
+            
+    @property
+    def end_date(self) -> datetime: # type: ignore
+        for operation in self.operations[::-1]:
+            if isinstance(operation, (Exchange, Deposit)):
+                return datetime.fromisoformat(operation.date)
+
+    @property
+    async def ROI(self):
+        bitcoin_received = 0
+        fiat_sent = 0
+        last_bitcoin_price = 0
+        for operation in self.operations:
+            if isinstance(operation, Exchange):
+                bitcoin_received += operation.bitcoin_received
+                fiat_sent += operation.fiat_sent
+                last_bitcoin_price = operation.bitcoin_price
+
+            elif isinstance(operation, Deposit):
+                bitcoin_received += operation.bitcoin_received
+                last_bitcoin_price = operation.bitcoin_price
+            
+            elif isinstance(operation, Withdraw):
+                pass
+                
+        return (bitcoin_received * last_bitcoin_price) / fiat_sent - 1
+    

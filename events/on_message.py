@@ -1,7 +1,7 @@
 import os
 import traceback
 from discord import Message, Embed
-from classes.bitstack.modele.history import History
+from classes.bitstack.model.history import History
 from init import COLOR, client, log
 
 log.info("Registered on_message")
@@ -28,7 +28,7 @@ async def on_message(message: Message):
                     await message.reply(
                         embed = Embed(
                             title = "Analyse de l'historique",
-                            description = f"ROI: {round(await history.ROI * 100, 2)}%\nBitcoin acheté: {round(await history.bitcoin_buyed, 5)}\nFiat dépensé: {round(await history.fiat_sent, 2)} €\nValeur actuelle du portefeuille: {round(await history.wallet_value, 2)} €",
+                            description = f"ROI instantané: {round(await history.instant_ROI * 100, 2)}%\nROI sur la période: {round(await history.ROI * 100, 2)}%\nBitcoin acheté: {round(await history.bitcoin_buyed, 5)}\nFiat dépensé: {round(await history.fiat_sent, 2)} €\nValeur actuelle du portefeuille: {round(await history.wallet_value, 2)} €",
                             color = COLOR
                         )
                     )
