@@ -1,8 +1,8 @@
 from math import ceil
 import traceback
-from typing import Literal
+from typing import Literal, Optional
 from discord.app_commands import Group, AppCommandContext, AppInstallationType, Range, describe
-from discord import Embed, Interaction
+from discord import Embed, Interaction, User
 from classes.discord_wallet import BitcoinWallet
 from classes.emoji import Emoji
 from init import COLOR, OPENNODE_CALLBACK_URL, log, storage
@@ -126,3 +126,62 @@ async def walletCommand(interaction: Interaction):
             icon_url = "https://registry.start9.com/package/v0/icon/mempool"
         )
     )
+
+@bitcoin.command(
+    name = "send",
+    description = "Envoyer des bitcoins"
+)
+@describe(membre = "La personne qui doit recevoir", montant = "Montant à envoyer", devise = "Envoyer des satoshis, ou équivalent en euro. Satoshi par défaut", message = "Message facultatif à joindre")
+async def sendCommand(interaction: Interaction, membre: User, montant: Range[int, 1, 10_000], devise: Literal["Euro", "Satoshi"] = "Satoshi", message: Optional[str] = None):
+    assert interaction.client.user
+    user_wallet = await BitcoinWallet.from_user_id(interaction.user.id)
+    recipient_wallet = await BitcoinWallet.from_user_id(membre.id)
+    if devise == "Euro":
+        montant = ceil((montant / storage.bitcoin_price) * 1e8)
+
+    try:
+        await user_wallet.send(montant, recipient_wallet)
+        try:
+            await membre.send(
+                embed = Embed(
+                    title = "Vous avez reçu du Bitcoin",
+                    description = f"{interaction.user.display_name} vous a envoyé {montant}{Emoji.sat}.\n{f'*{message}*' or ''}",
+                    color = COLOR
+                ).set_author(
+                    name = interaction.user.display_name,
+                    icon_url = interaction.user.display_avatar.url
+                )
+            )
+            sent = True
+        
+        except:
+            sent = False
+
+        await interaction.response.send_message(
+            embed = Embed(
+                title = "Confirmation de transfert",
+                description = f"Vous avez transféré {montant}{Emoji.sat} à {membre.display_name}\n{f"Note: {membre.display_name} n'a pas reçu de notification car il n'autorise pas {interaction.client.user.display_name} à lui envoyer des MP." if not sent else ''}",
+                color = COLOR
+            )
+        )
+
+    except AssertionError:
+        await interaction.response.send_message(
+            embed = Embed(
+                title = "Échec de l'envoi",
+                description = "Le montant saisi est invalide",
+                color = COLOR
+            )
+        )
+    
+    except BitcoinWallet.FundsError:
+        await interaction.response.send_message(
+            embed = Embed(
+                title = "Échec de l'envoi",
+                description = "Vous n'avez pas assez de bitcoin pour réaliser ce transfert",
+                color = COLOR
+            )
+        )
+    
+    finally:
+        log.warn(traceback.format_exc())

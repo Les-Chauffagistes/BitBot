@@ -343,7 +343,7 @@ class BitcoinWallet(BaseDiscordWallet):
         return self._balance
     
     @property
-    def user_id(self):
+    def id(self):
         return self._user_id
     
     class types(TypedDict):
@@ -395,3 +395,9 @@ class BitcoinWallet(BaseDiscordWallet):
         self._balance -= amount
         await self.save()
         return self
+
+    async def send(self, amount: int, wallet: 'BitcoinWallet'):
+        await self.remove_sat(amount)
+        if wallet.id == self.id:
+            wallet = self
+        await wallet.add_sat(amount)

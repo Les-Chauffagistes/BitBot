@@ -6,3 +6,4 @@ asyncio
 python-dotenv
 bs4
 qrcode[PIL]
+coverage
