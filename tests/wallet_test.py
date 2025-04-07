@@ -1,6 +1,5 @@
 import unittest
 from classes.discord_wallet import BitcoinWallet
-from commands.pi import wallet
 
 class TestBitcoinWallet(unittest.IsolatedAsyncioTestCase):
 

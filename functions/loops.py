@@ -10,8 +10,8 @@ from classes.item import CommunityItem
 from functions.utils import fetch, get_user_signin_channel, mark_as_done, read_file, write_file
 from init import BUYER_ROLE_ID, COLOR, GUILD_ID, MODE, SELLER_ROLE_ID, SHOP_CHANNEL_ID, WALLET_PI_FULCRAN, client, log, storage
 from asyncio import sleep, CancelledError
-from modules.ckpool import get_miners
 from modules.pinet.classes import Wallet
+from modules.ckpool import eusolo
 
 log.info("Creating tasks")
 
@@ -22,17 +22,31 @@ async def loop_miner():
 
     else:
         dashboard = await fetch(1287747648564105307, 1287747811798024302)
+    
+    log.debug("Waiting for bitcoin block reward")
+    while not storage.bitcoin_block_reward:
+        await sleep(0.1)
+    
+    log.debug("Got reward")
 
     while True:
         try: # Loop instructions
-            miners = await get_miners()
-            txt = ""
-            for miner in miners:
-                txt += f"{'🟢' if miner.is_on else '🔴'} **{miner.name} :** `{miner.hashrate.one_day}` {miner.last_update}\n"
+            pool = await eusolo.get_user(eusolo.POOL_ID)
+            txt = "```\n"
+            txt += f"{'  '} {'Nom':<10} {'Shares':>9} {'Reward':>9} {'Valeur (€)':>11}\n"
+            txt += "-" * 49 + "\n"
 
+            for worker in pool.workers:
+                worker_percent = worker.shares / pool.shares
+                worker_reward = worker_percent * storage.bitcoin_block_reward
+                status = "🟢" if worker.is_on else "🔴"
+                
+                txt += f"{status} {worker.name:<10} {round(worker_percent * 100, 1):>7} % {round(worker_reward, 4):>7} ₿ {round(worker_reward * storage.bitcoin_price, 2):>9} €\n"
+
+            txt += "```"
             await dashboard.edit(
                 embed = Embed(
-                    title = "Pool - Infos pour 24 heures",
+                    title = "Pool - Infos instantanées",
                     description = txt,
                     color = COLOR
                 )
@@ -310,11 +324,18 @@ async def loop_bitcoin_price():
     log.info("Ready")
     while True:
         try:
-            async with ClientSession() as session:
-                async with session.get('https://swakraft.hopto.org/api/bitcoin-price') as response:
+            async with ClientSession('https://swakraft.hopto.org/api/') as session:
+                async with session.get('bitcoin-price') as response:
+                    log.debug(await response.text())
                     price: int = (await response.json())['EUR']
 
                     storage.bitcoin_price = price
+                
+                async with session.get('bitcoin-block-reward') as response:
+                    log.debug(await response.text())
+                    reward: float = float(await response.text())
+
+                    storage.bitcoin_block_reward = reward
         
         except CancelledError:
             break
@@ -324,6 +345,7 @@ async def loop_bitcoin_price():
 
         finally:
             await sleep(60)
+            continue
     
 async def loop_status():
     log.info("Ready, waiting...")

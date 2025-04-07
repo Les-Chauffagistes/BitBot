@@ -41,10 +41,11 @@ BADGE = Literal["Vérifié", "Vendeur de confiance"]
 class SharedStorage:
     """shared read and write storage accross files"""
 
-    __slots__ = ('bitcoin_price')
+    __slots__ = ('bitcoin_price', 'bitcoin_block_reward')
 
     def __init__(self):
         self.bitcoin_price: int = 0
+        self.bitcoin_block_reward: float = 0.0
 
 storage = SharedStorage()
 

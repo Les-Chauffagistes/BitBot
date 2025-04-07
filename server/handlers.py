@@ -5,7 +5,7 @@ from classes.brand import Brand
 from classes.discord_wallet import BitcoinWallet
 from classes.emoji import Emoji
 from functions.utils import read_file, send_admin
-from init import COLOR, GUILD_ID, routes, log, client
+from init import COLOR, GUILD_ID, MODE, routes, log, client
 from aiohttp.web_request import Request
 from aiohttp.web import HTTPOk, json_response
 from discord import Embed, Guild, Member
@@ -139,3 +139,22 @@ async def bitcoin_withdrawal(request: Request):
         user
     )
     return web.Response()
+
+@routes.post("/ispoolmember")
+async def checkpoolmember(request: Request):
+    data = await request.json()
+    user_id = int(data["user_id"])
+    guild = client.get_guild(GUILD_ID)
+    assert guild
+    member = guild.get_member(user_id)
+    if MODE == "PROD":
+        role = guild.get_role(1285186541185925131)
+    
+    else:
+        role = guild.get_role(1356186777307840582)
+
+    if member and role:
+        if role in member.roles:
+            return json_response({"is_pool_member": True})
+
+    return json_response({"is_pool_member": False})
