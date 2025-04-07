@@ -1,8 +1,8 @@
 import traceback
 from typing import Literal, Optional, cast
-from discord import ButtonStyle, Embed, Interaction, TextStyle, User
+from discord import ButtonStyle, Embed, Interaction, User
 from discord.app_commands import Group, describe, Range
-from discord.ui import View, Button, Modal, TextInput
+from discord.ui import View, Button
 from classes.commands import Command
 from classes.discord_wallet import PiWallet
 from classes.emoji import Emoji
@@ -41,10 +41,9 @@ async def wallet(interaction: Interaction, network: Literal['Mainnet', 'Testnet'
                 wallet = await PiWallet.from_user(target.id if target else interaction.user.id)
                 if wallet:
                     log.debug('sending webhook...')
-                    embed, file = await wallet_view(wallet, network)
+                    embed = await wallet_view(wallet, network)
                     await interaction.followup.send(
-                        embed = embed,
-                        file = file
+                        embed = embed
                     )
 
                 else:
@@ -89,10 +88,9 @@ async def wallet(interaction: Interaction, network: Literal['Mainnet', 'Testnet'
                 wallet = await PiWallet.from_user(target.id if target else interaction.user.id)
                 if wallet:
                     if wallet.address:
-                        embed, file = await wallet_view(wallet, network)
+                        embed = await wallet_view(wallet, network)
                         await interaction.followup.send(
-                            embed = embed,
-                            file = file
+                            embed = embed
                         )
                     
                     else:

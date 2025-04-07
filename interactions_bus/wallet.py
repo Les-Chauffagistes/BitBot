@@ -1,9 +1,7 @@
-from discord import Embed, Guild, Interaction
+from discord import Embed, Interaction
 from classes.discord_wallet import PiWallet
 from discord.ui import View
-from init import COLOR, GUILD_ID, log, client
-
-log.info("Wallet interaction bus registered")
+from init import COLOR, log, client
 
 async def interact(interaction: Interaction, id: str, values: list[str]):
     user_wallet = await PiWallet.from_user(interaction.user.id)

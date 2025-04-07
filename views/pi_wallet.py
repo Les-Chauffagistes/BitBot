@@ -83,9 +83,9 @@ async def wallet_view(wallet: 'PiWallet', network: Literal["Mainnet", "Testnet",
         name = user.display_name,
         icon_url = user.display_avatar,
     ).set_image(
-        url = "attachment://wallet.png"
+        url = "https://swakraft.hopto.org/assets/pi_wallet1"
     )
-    return embed, File('assets/pi_wallet1.png', 'wallet.png')
+    return embed
 
 async def pay_seller(wallet: 'PiWallet', deposit_amount: float, full_price: bool = True):
     if full_price:

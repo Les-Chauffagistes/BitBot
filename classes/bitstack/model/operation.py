@@ -7,7 +7,7 @@ class Operation:
         self.date = date
         self.fuseau = fuseau
         self.description = description
-        self.bitcoin_price = bitcoin_price
+        self.bitcoin_price = float(bitcoin_price)
         self.id = id
 
     def __repr__(self):

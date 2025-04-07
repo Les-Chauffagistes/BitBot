@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import traceback
-from typing import Any, Literal, Optional, cast
+from typing import Optional, cast
 from discord import Member, SelectOption, User
 from typing import TypedDict
 from functions.utils import read_file, write_file

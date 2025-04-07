@@ -8,9 +8,9 @@ import commands.pi
 import commands.pi_profile
 import commands.business
 import commands.context
-from tools.whois import start_check
-from views.community_business import signin_view
-from views.user_business import shop_public_view
+import commands.bitcoin
+# from views.community_business import signin_view
+# from views.user_business import shop_public_view
 
 log.info("Registered on_ready")
 
@@ -34,31 +34,34 @@ async def on_ready():
         tree.add_command(commands.vente.ventes)
         tree.add_command(commands.business.business)
         tree.add_command(commands.badge.badge)
-        members = await start_check()
-        log.info(members)
+        tree.add_command(commands.bitcoin.bitcoin)
         
         if SYNC:
             cmds = await tree.sync()
             log.info(f'{len(cmds)} commandes slash synchronisées')
         
+        """
         embed, view = shop_public_view()
         await (await fetch(SHOP_CHANNEL_ID, SHOP_MESSAGE_ID)).edit(
             embed = embed,
             view = view
         )
+        """
 
+        """
         embed, view = signin_view()
         await (await fetch(SIGNIN_CHANNEL_ID, SIGNIN_MESSAGE_ID)).edit(
             embed = embed,
             view = view
-        )
+        )"""
         
         tasks = [
+            loop_bitcoin_price(),
             loop_miner(),
             loop_pi_deposit(),
             loop_onchain_tx(),
             loop_delete_channel(),
-            loop_status()
+            loop_status(),
         ]
         await gather(*tasks)
 

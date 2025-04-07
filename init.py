@@ -1,3 +1,5 @@
+print(open("name").read())
+
 from typing import Literal, cast
 from discord import Client, Intents, app_commands
 from modules.logger import Logger
@@ -5,6 +7,9 @@ from aiohttp import web
 from dotenv import load_dotenv
 from os import getenv
 
+log = Logger()
+
+log.debug('Loading env variables...')
 load_dotenv('data/.env')
 intents = Intents.default()
 intents.message_content = True
@@ -12,8 +17,10 @@ intents.members = True
 intents.presences = True
 client = Client(intents = intents)
 tree = app_commands.CommandTree(client)
-token: str = cast(str, getenv('DISCORD_API_TOKEN'))
-log = Logger()
+token = getenv('DISCORD_API_TOKEN')
+assert token is not None
+token = cast(str, token)
+
 app = web.Application()
 routes = web.RouteTableDef()
 
@@ -22,15 +29,29 @@ PROD_GUILD_ID = 809374366592401419
 TEST_GUILD_ID = 1306611983092682822
 FULCRAN_ID = 276123659050024962
 COLOR = 0xDE983D
-PORT = 17101
+
 SYNC = False
 SERVER_NAME = "Pill Lab's"
-MODE = cast(Literal["DEV", "PROD"], getenv("MODE"))
+MODE = getenv("MODE")
+assert MODE in ["DEV", "PROD"]
+MODE = cast(Literal["DEV", "PROD"], MODE)
 WALLET_PI_FULCRAN = "GCGH7QAXTHULPAWQOMTI26NY7BL36SUSVX6KTMZUSZLZD2XPIHFX6Z7J"
 BADGE = Literal["Vérifié", "Vendeur de confiance"]
 
+class SharedStorage:
+    """shared read and write storage accross files"""
+
+    __slots__ = ('bitcoin_price', 'bitcoin_block_reward')
+
+    def __init__(self):
+        self.bitcoin_price: int = 0
+        self.bitcoin_block_reward: float = 0.0
+
+storage = SharedStorage()
+
 log.info(f"Strarting in {"🧪" if MODE == "DEV" else "🚀"} {MODE} mode...")
 if MODE == "DEV":
+    PORT = 18101
     GUILD_ID = TEST_GUILD_ID
     SIGNIN_TICKET_CATEGORY_ID = 1313419310106152970
     BUYER_ROLE_ID = 1310271143168573450
@@ -41,8 +62,10 @@ if MODE == "DEV":
     SELL_POST_CHANNEL_ID = 1310526655101407232
     SIGNIN_CHANNEL_ID = 1310229664244961361
     SIGNIN_MESSAGE_ID = 1310229676383277121
+    OPENNODE_CALLBACK_URL = "https://swakraft.hopto.org/api/opennode/{action}/test-bitbot"
 
 else: # PROD
+    PORT = 17101
     GUILD_ID = PROD_GUILD_ID
     SIGNIN_TICKET_CATEGORY_ID = 1315981531046613002
     BUYER_ROLE_ID = 1009099124597080115
@@ -53,3 +76,4 @@ else: # PROD
     SELL_POST_CHANNEL_ID = 1305173523391840318
     SIGNIN_CHANNEL_ID = 1247211754283601931
     SIGNIN_MESSAGE_ID = 1247211829344866387
+    OPENNODE_CALLBACK_URL = "https://swakraft.hopto.org/api/opennode/{action}/bitbot"

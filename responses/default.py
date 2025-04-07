@@ -1,5 +1,5 @@
 from discord import Embed, Interaction
-from init import client, COLOR
+from init import COLOR
 
 async def send(interaction: Interaction, title: str, description: str):
     await interaction.response.send_message(

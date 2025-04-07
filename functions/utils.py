@@ -1,10 +1,9 @@
+import os, aiofiles
 from datetime import datetime
-import os
-import aiofiles
-from typing import Any, Literal, Union, cast
+from typing import Any, Literal, Optional, Union, cast
 from json import loads, dumps
-from discord import Guild, Message, PermissionOverwrite, TextChannel, User, Member
-from init import BUYER_ROLE_ID, GUILD_ID, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY_ID, client, log
+from discord import Embed, Guild, Message, PermissionOverwrite, TextChannel, User, Member
+from init import ADMIN_NOTIFICATIONS_CHANNEL_ID, BUYER_ROLE_ID, COLOR, GUILD_ID, SELLER_ROLE_ID, SIGNIN_TICKET_CATEGORY_ID, client, log
 from discord import channel
 from discord.utils import get
 
@@ -127,3 +126,22 @@ async def is_signin_complete(user: Member | User) -> bool:
             return False
     
     return True
+
+async def send_admin(title: str, description: str, member: Optional[Member | User] = None, silent: bool = False):
+    channel = client.get_channel(ADMIN_NOTIFICATIONS_CHANNEL_ID)
+    assert isinstance(channel, TextChannel)
+    embed = Embed(
+        title = title,
+        description = description,
+        color = COLOR
+    )
+    if member:
+        embed.set_author(
+            name = member.display_name,
+            icon_url = member.display_avatar.url
+        )
+        
+    await channel.send(
+        embed = embed,
+        silent = silent
+    )

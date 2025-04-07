@@ -1,4 +1,4 @@
-from classes.bitstack.modele.operation import Operation
+from classes.bitstack.model.operation import Operation
 
 class Withdraw(Operation):
     """Represents a witdrawal operation """

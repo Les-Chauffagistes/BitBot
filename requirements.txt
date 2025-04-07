@@ -5,3 +5,11 @@ requests
 asyncio
 python-dotenv
 bs4
+qrcode[PIL]
+coverage
+google-auth
+gspread
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+pytest

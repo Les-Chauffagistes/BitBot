@@ -1,6 +1,5 @@
-import os
+import os, traceback
 from asyncio import Task
-import traceback
 from typing import Literal, cast
 from discord import ButtonStyle, Embed, Interaction, Member, Message, SelectOption, TextChannel, TextStyle
 from classes.discord_wallet import PiWallet
@@ -13,8 +12,6 @@ from responses.default import incomplete_signin_view, item_not_found
 from views.community_business import delete_view, discord_pre_payout, item_card_view, item_edit, main_edit_view, onchain_pre_payout, wallet_creation_view
 import asyncio
 from discord.utils import MISSING
-
-log.info("Community interaction bus registered")
 
 async def interact(interaction: Interaction, id: str, values: list[str]):
     user_wallet = await PiWallet.from_user(interaction.user.id)
