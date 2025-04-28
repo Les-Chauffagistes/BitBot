@@ -158,3 +158,20 @@ async def checkpoolmember(request: Request):
             return json_response({"is_pool_member": True})
 
     return json_response({"is_pool_member": False})
+
+@routes.get('/user')
+async def user(request: Request):
+    user_id = request.query.get('user_id')
+    if not user_id:
+        return json_response({"status": "error", "error": "Missing user_id"}, status=400)
+    
+    guild = client.get_guild(GUILD_ID)
+    assert guild
+    member = guild.get_member(int(user_id))
+    if member:
+        url = member.display_avatar.url
+        pseudo = member.display_name
+        return json_response({"url": url, "pseudo": pseudo})
+
+    else:
+        return json_response(data={"status": "error", "error": "Member not found"}, status=404)
