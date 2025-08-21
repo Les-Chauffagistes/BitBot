@@ -1,7 +1,8 @@
+import os
 import traceback
 from typing import Literal, Optional, cast
 from discord import ButtonStyle, Embed, Interaction, User
-from discord.app_commands import Group, describe, Range
+from discord.app_commands import Group, describe, Range, default_permissions, guild_only
 from discord.ui import View, Button
 from classes.commands import Command
 from classes.discord_wallet import PiWallet
@@ -270,5 +271,37 @@ async def withdrawCommand(interaction: Interaction, montant: Range[int, 1, 10_00
                     ephemeral = True
                 )
 
+    except:
+        log.warn(traceback.format_exc())
+
+@pi.command(
+    name = "wallets",
+    description = "Consulter tous les soldes sur Discord"
+)
+@default_permissions(administrator = True)
+@guild_only
+async def walletsCommand(interaction: Interaction):
+    try:
+        assert interaction.user
+        assert interaction.guild
+
+        t = ""
+        for user_wallet_filename in os.listdir("data/wallets/pi"):
+            if not user_wallet_filename.endswith(".json"):
+                continue
+            user_wallet = await PiWallet.from_file(f"wallets/pi/{user_wallet_filename}")
+            user = interaction.guild.get_member(user_wallet.id)
+            
+            username = user.display_name if user else "Anonyme"
+            t += f"{username} : {user_wallet.balance} π\n"
+        
+        await interaction.response.send_message(
+            embed = Embed(
+                title = "Soldes sur Discord",
+                description = t.strip(),
+                color = COLOR
+            )
+        )
+    
     except:
         log.warn(traceback.format_exc())
