@@ -1,4 +1,5 @@
 import commands.badge
+import commands.pool
 import commands.vente
 from init import *
 from functions.loops import *
@@ -35,6 +36,7 @@ async def on_ready():
         tree.add_command(commands.business.business)
         tree.add_command(commands.badge.badge)
         tree.add_command(commands.bitcoin.bitcoin)
+        tree.add_command(commands.pool.pool)
         
         if SYNC:
             cmds = await tree.sync()

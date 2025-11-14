@@ -41,7 +41,7 @@ echo "{}" >> "data/wallets/pi_pending_payments.json"
 
 # Activer l'environnement virtuel
 echo "Preparing virtual environment..."
-python3 -m venv venv
+python3.12 -m venv venv
 source "venv/bin/activate"
 
 # Mettre à jour pip et installer les dépendances
