@@ -1,1 +1,0 @@
-from modules.ckpool import eusolo

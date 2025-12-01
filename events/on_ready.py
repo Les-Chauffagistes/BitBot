@@ -1,14 +1,8 @@
-import commands.badge
 import commands.pool
-import commands.vente
 from init import *
 from functions.loops import *
 from asyncio import gather
 import commands.commands
-import commands.pi
-import commands.pi_profile
-import commands.business
-import commands.context
 import commands.bitcoin
 # from views.community_business import signin_view
 # from views.user_business import shop_public_view
@@ -30,11 +24,6 @@ async def on_ready():
     try:
         global tasks
         log.info('Ready!')
-        commands.pi.pi.add_command(commands.pi_profile.profile)
-        tree.add_command(commands.pi.pi)
-        tree.add_command(commands.vente.ventes)
-        tree.add_command(commands.business.business)
-        tree.add_command(commands.badge.badge)
         tree.add_command(commands.bitcoin.bitcoin)
         tree.add_command(commands.pool.pool)
         

@@ -47,7 +47,7 @@ def make_qr_code(invoice: Charge | Withdraw_request):
         )
     )
     log.debug("done")
-    img_3.save(f"output/{data[0:10]}.png")
+    img_3.save(f"data/output/{data[0:10]}.png")
 
 async def payment_view(charge: Charge):
     embed = Embed(
@@ -63,7 +63,7 @@ async def payment_view(charge: Charge):
     log.debug("Performing en thread...")
     await loop.run_in_executor(None, make_qr_code, charge)
     log.debug("Exiting thread...")
-    file = File(f'output/{charge.payreq[0:10]}.png', 'invoice.png')
+    file = File(f'data/output/{charge.payreq[0:10]}.png', 'invoice.png')
     custom_id = os.urandom(16).hex()
     await charge.bind(custom_id) # bind lnurl with button id
     view = View(timeout = None).add_item(
