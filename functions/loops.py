@@ -5,7 +5,6 @@ from aiohttp import ClientSession
 from discord import ButtonStyle, Embed, Guild, Role, TextChannel, Activity, ActivityType
 from discord.errors import Forbidden
 from discord.ui import Button, View
-from classes.discord_wallet import PiWallet
 from classes.item import CommunityItem
 from functions.utils import fetch, get_user_signin_channel, mark_as_done, read_file, write_file
 from init import BUYER_ROLE_ID, COLOR, GUILD_ID, MODE, SELLER_ROLE_ID, SHOP_CHANNEL_ID, WALLET_PI_FULCRAN, client, log, storage
