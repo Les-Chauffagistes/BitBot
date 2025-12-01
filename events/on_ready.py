@@ -49,9 +49,6 @@ async def on_ready():
         tasks = [
             loop_bitcoin_price(),
             loop_miner(),
-            loop_pi_deposit(),
-            loop_onchain_tx(),
-            loop_delete_channel(),
             loop_status(),
         ]
         await gather(*tasks)
