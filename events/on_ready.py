@@ -2,7 +2,6 @@ import commands.pool
 from init import *
 from functions.loops import *
 from asyncio import gather
-import commands.commands
 import commands.bitcoin
 # from views.community_business import signin_view
 # from views.user_business import shop_public_view
@@ -31,24 +30,8 @@ async def on_ready():
             cmds = await tree.sync()
             log.info(f'{len(cmds)} commandes slash synchronisées')
         
-        """
-        embed, view = shop_public_view()
-        await (await fetch(SHOP_CHANNEL_ID, SHOP_MESSAGE_ID)).edit(
-            embed = embed,
-            view = view
-        )
-        """
-
-        """
-        embed, view = signin_view()
-        await (await fetch(SIGNIN_CHANNEL_ID, SIGNIN_MESSAGE_ID)).edit(
-            embed = embed,
-            view = view
-        )"""
-        
         tasks = [
             loop_bitcoin_price(),
-            loop_miner(),
             loop_status(),
         ]
         await gather(*tasks)

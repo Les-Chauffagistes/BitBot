@@ -72,7 +72,7 @@ class History:
     @classmethod
     async def current_bitcoin_price(cls) -> int:
         async with ClientSession() as session:
-            async with session.get('https://swakraft.hopto.org/api/bitcoin-price') as response:
+            async with session.get('https://swakraft.fr/api/bitcoin-price') as response:
                 response.raise_for_status()
                 data = await response.json()
                 return data['EUR']

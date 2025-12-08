@@ -1,27 +1,22 @@
 from json import loads
 import traceback
 from typing import Literal, cast
-from classes.brand import Brand
 from classes.discord_wallet import BitcoinWallet
 from classes.emoji import Emoji
-from functions.utils import read_file, send_admin
+from functions.utils import send_admin
 from init import COLOR, GUILD_ID, MODE, routes, log, client
 from aiohttp.web_request import Request
 from aiohttp.web import HTTPOk, json_response
 from discord import Embed, Guild, Member
 from aiohttp import web
-
 from modules.opennode.model.webhooks.withdraw import Withdraw, lnurl
+
 log.debug("Creating handlers...")
 
-log.info("Handler /test defined")
+
 @routes.get('/test')
 async def message(request: Request):
-    try:
-        log.debug(await request.json())
-    
-    except:
-        log.debug('no data available')
+    log.debug("OK")
     return HTTPOk(body="Success")
 
 @routes.get('/server')
@@ -34,22 +29,6 @@ async def server(request: Request):
         "members": guild.member_count,
         "online": len([member for member in guild.members if member.status.value != "offline"])
     })
-
-log.info("Handler /business/entries defined")
-@routes.get('/business/entries')
-async def entries(request: Request):
-    log.get("business/entries")
-    data = cast(dict[str, Brand.HistoryEntry.types], await read_file('business/history.json'))
-    result: dict[str, dict] = {}
-    for entry_id in data.keys():
-        try:
-            result[entry_id] = (await Brand.HistoryEntry.load_entry(entry_id)).json #type: ignore
-        
-        except:
-            log.warn(traceback.format_exc())
-            continue
-    
-    return json_response(result)
 
 log.info("Handler /deposit/pay defined")
 @routes.post('/bitcoin/pay')
@@ -125,7 +104,7 @@ async def bitcoin_withdrawal(request: Request):
                     description = f"Vous avez retiré **{payload['amount']}** {Emoji.sat} de votre wallet Discord.",
                     color = COLOR,
                 ).set_image(
-                    url = "https://swakraft.hopto.org/assets/bitcoin_wallet1"
+                    url = "https://swakraft.fr/assets/bitcoin_wallet1"
                 )
             )
         
