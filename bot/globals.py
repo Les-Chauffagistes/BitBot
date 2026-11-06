@@ -1,0 +1,4 @@
+COLOR = 0xDE983D
+
+# emojis
+LOADING = "<a:loading:1342494752985190564>"

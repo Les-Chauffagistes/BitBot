@@ -1,0 +1,15 @@
+services:
+  app:
+    build:
+      context: .
+      secrets:
+        - pipindex
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    env_file:
+      - .env
+
+secrets:
+  pipindex:
+    environment: PIP_EXTRA_INDEX_URL
