@@ -10,7 +10,6 @@ on:
 jobs:
   build-push:
     if: github.event_name == 'push'
-    needs: test
     uses: Les-Chauffagistes/deploy/.github/workflows/build.yml@develop
     with:
       service-name: bitbot
