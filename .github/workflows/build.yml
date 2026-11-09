@@ -1,0 +1,16 @@
+name: CI
+ 
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*.*.*"]
+  pull_request:
+
+ 
+jobs:
+  build-push:
+    if: github.event_name == 'push'
+    uses: Les-Chauffagistes/deploy/.github/workflows/build.yml@develop
+    with:
+      service-name: bitbot
+    secrets: inherit
