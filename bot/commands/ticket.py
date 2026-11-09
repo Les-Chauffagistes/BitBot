@@ -1,8 +1,7 @@
 from discord.enums import ButtonStyle
 from discord import TextChannel
 from settings import settings
-from discord import Interaction
-from discord.app_commands import default_permissions
+from discord import Interaction, Permissions
 from discord.app_commands import Group
 from discord import Embed
 from ..globals import COLOR
@@ -10,15 +9,27 @@ from discord.ui import View, Button
 
 
 class TicketGroup(Group):
-    pass
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        permissions = getattr(interaction.user, "guild_permissions", None)
+        if permissions is None or not permissions.manage_guild:
+            await interaction.response.send_message(
+                "Vous n'avez pas la permission d'utiliser cette commande.",
+                ephemeral = True
+            )
+            return False
+        return True
 
-tickets = TicketGroup(name="tickets", description="Ticket commands")
+tickets = TicketGroup(
+    name = "tickets",
+    description = "Ticket commands",
+    default_permissions = Permissions(manage_guild=True),
+    guild_only = True
+)
 
 
 @tickets.command(
     name = "close"
 )
-@default_permissions(manage_guild=True)
 async def close_ticket(interaction: Interaction):
     if interaction.channel.category_id != settings.support_category_id or not isinstance(interaction.channel, TextChannel):
         await interaction.response.send_message(
@@ -43,7 +54,6 @@ async def close_ticket(interaction: Interaction):
 @tickets.command(
     name = "spawn"
 )
-@default_permissions(manage_guild=True)
 async def spawn_ticket(interaction: Interaction, channel: TextChannel):
     message = await channel.send(
         embed = Embed(
@@ -64,7 +74,6 @@ async def spawn_ticket(interaction: Interaction, channel: TextChannel):
 @tickets.command(
     name = "delete"
 )
-@default_permissions(manage_guild=True)
 async def delete_ticket(interaction: Interaction):
     if interaction.channel.category_id != settings.support_category_id or not isinstance(interaction.channel, TextChannel):
         await interaction.response.send_message(
