@@ -1,6 +1,7 @@
 from init import client, routes, app, web
 import bot.events.on_ready
 import bot.events.on_interaction
+import server.handlers
 from settings import settings
 from chauff_cmn.logging import logger as log
 
