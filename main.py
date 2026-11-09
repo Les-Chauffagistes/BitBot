@@ -1,3 +1,5 @@
+import asyncio
+import signal
 from init import client, routes, app, web
 import bot.events.on_ready
 import bot.events.on_interaction
@@ -17,7 +19,23 @@ async def main():
     log.info("Connecting to Discord Gateway...")
     await client.login(settings.token)
     log.info("Connected")
-    await client.connect()
+
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, stop.set)
+
+    connection = asyncio.create_task(client.connect())
+    stopper = asyncio.create_task(stop.wait())
+    try:
+        await asyncio.wait({connection, stopper}, return_when=asyncio.FIRST_COMPLETED)
+        if stop.is_set():
+            log.info("Shutdown signal received, stopping...")
+    finally:
+        connection.cancel()
+        stopper.cancel()
+        await clear()
+        await runner.cleanup()
 
 
 async def clear():
@@ -33,8 +51,4 @@ if __name__ == '__main__':
     log.info("Creating an asyncio event loop...")
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(main())
-
-    except KeyboardInterrupt:
-        loop.run_until_complete(clear())
+    loop.run_until_complete(main())
