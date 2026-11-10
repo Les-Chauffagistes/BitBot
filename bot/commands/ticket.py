@@ -1,11 +1,12 @@
 from discord.enums import ButtonStyle
-from discord import TextChannel
+from discord import TextChannel, Member, CategoryChannel
 from settings import settings
 from discord import Interaction, Permissions
 from discord.app_commands import Group
 from discord import Embed
 from ..globals import COLOR
 from discord.ui import View, Button
+from ..utils import create_ticket as make_ticket
 
 
 class TicketGroup(Group):
@@ -92,4 +93,23 @@ async def delete_ticket(interaction: Interaction):
             )
         ),
         ephemeral=True
+    )
+
+@tickets.command(
+    name = "create"
+)
+async def create_ticket(interaction: Interaction, membre: Member):
+    assert interaction.guild is not None
+    channel = interaction.guild.get_channel(settings.support_category_id)
+    if not isinstance(channel, CategoryChannel):
+        await interaction.response.send_message(
+            "Impossible de créer le ticket à cause d'une erreur technique.",
+            ephemeral = True
+        )
+
+    await make_ticket(
+        membre,
+        settings.support_category_id,
+        "admin",
+        interaction.user
     )

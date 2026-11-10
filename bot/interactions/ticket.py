@@ -1,8 +1,6 @@
-from discord import TextChannel
-from discord import Member
-from discord import PermissionOverwrite
-from discord import CategoryChannel, Interaction
+from discord import TextChannel, Member, CategoryChannel, Interaction
 from settings import settings
+from ..utils import create_ticket as make_ticket
 
 from init import interaction_handler
 
@@ -22,14 +20,7 @@ def register_ticket_interactions():
             return
 
         try:
-            channel = await channel.create_text_channel(
-                name = interaction.user.name,
-                reason = f"Ticket créé par {interaction.user.name} via le bot",
-                overwrites = {
-                    interaction.guild.default_role: PermissionOverwrite(read_messages = False),
-                    interaction.user: PermissionOverwrite(read_messages = True)
-                }
-            )
+            channel = await make_ticket(interaction.user, interaction.channel,"user")
         except:
             await interaction.response.send_message(
                 "Impossible de créer un ticket à cause d'une erreur technique. Contactez directement un administrateur.",
@@ -40,13 +31,7 @@ def register_ticket_interactions():
             f"Ticket créé avec succès ! Vous pouvez le retrouver ici : {channel.mention}",
             ephemeral = True
         )
-        try:
-            await channel.send(
-                f"Bonjour {interaction.user.mention}, un membre de l'équipe va vous répondre dès que possible. "
-                "En attendant, merci de décrire votre problème en détail et d'ajouter toute information pertinente."
-            )
-        except:
-            pass
+
 
     @interaction_handler.register_interaction("CLOSE_TICKET")
     async def close_ticket(interaction: Interaction, _):
@@ -54,7 +39,7 @@ def register_ticket_interactions():
         assert isinstance(interaction.user, Member)
         assert isinstance(interaction.channel, TextChannel)
 
-        await interaction.channel.edit(sync_permissions=True)
+        await interaction.channel.edit(sync_permissions = True)
         await interaction.response.send_message(
             "Le ticket a été fermé avec succès.",
             ephemeral = True
