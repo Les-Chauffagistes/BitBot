@@ -1,10 +1,13 @@
 from typing import Literal
-from discord import CategoryChannel, Member, PermissionOverwrite
+from discord import CategoryChannel, Member, PermissionOverwrite, TextChannel
+from discord.abc import GuildChannel
+
+from settings import settings
 
 messages = {
-    "user": "Bonjour {%s}, un membre de l'équipe va vous répondre dès que possible. "
+    "user": "Bonjour {member}, un membre de l'équipe va vous répondre dès que possible. "
             "En attendant, merci de décrire votre problème en détail et d'ajouter toute information pertinente.",
-    "admin": "Bonjour {%s}, {%s} a ouvert ce ticket pour vous."
+    "admin": "Bonjour {member}, {admin} a ouvert ce ticket pour vous."
 }
 
 
@@ -20,8 +23,18 @@ async def create_ticket(for_member: Member, category_support: CategoryChannel, o
     )
     try:
         await ticket.send(
-            messages[opened_by].format(for_member.mention, admin_member.mention if admin_member else None),
+            messages[opened_by].format(
+                member = for_member.mention,
+                admin = admin_member.mention if admin_member else None,
+            ),
         )
-    except:
+    except Exception as e:
         pass
     return ticket
+
+
+def is_ticket(channel: GuildChannel):
+    from chauff_cmn.logging import logger as log
+    log.debug(isinstance(channel, GuildChannel))
+    log.debug(channel.category_id == settings.support_category_id)
+    return isinstance(channel, TextChannel) and channel.category_id == settings.support_category_id

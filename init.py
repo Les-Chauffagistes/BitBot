@@ -1,7 +1,7 @@
 from chauff_cmn.logging import configure
 from settings import settings
 
-configure(service = "auth-service-back", level = settings.log_level)
+configure(service = "bitbot", level = settings.log_level)
 from bot.interactions.util import InteractionHandler
 from discord import Client, Intents, app_commands
 from aiohttp import web
