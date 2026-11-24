@@ -22,7 +22,7 @@ def register_ticket_interactions():
             return
 
         try:
-            channel = await make_ticket(interaction.user, interaction.channel,"user")
+            channel = await make_ticket(interaction.user, channel,"user")
         except Exception as e:
             await interaction.response.send_message(
                 "Impossible de créer un ticket à cause d'une erreur technique. Contactez directement un administrateur.",
