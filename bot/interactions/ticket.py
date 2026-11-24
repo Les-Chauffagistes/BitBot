@@ -1,6 +1,7 @@
 from discord import TextChannel, Member, CategoryChannel, Interaction
 from settings import settings
 from ..utils import create_ticket as make_ticket
+from chauff_cmn.logging import logger as log
 
 from init import interaction_handler
 
@@ -17,15 +18,17 @@ def register_ticket_interactions():
                 "Impossible de créer un ticket à cause d'une erreur technique. Contactez directement un administrateur.",
                 ephemeral = True
             )
+            log.error("Wrong channel type")
             return
 
         try:
             channel = await make_ticket(interaction.user, interaction.channel,"user")
-        except:
+        except Exception as e:
             await interaction.response.send_message(
                 "Impossible de créer un ticket à cause d'une erreur technique. Contactez directement un administrateur.",
                 ephemeral = True
             )
+            log.error(e)
             return
         await interaction.response.send_message(
             f"Ticket créé avec succès ! Vous pouvez le retrouver ici : {channel.mention}",

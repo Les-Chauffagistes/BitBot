@@ -1,6 +1,7 @@
 from typing import Literal
 from discord import CategoryChannel, Member, PermissionOverwrite, TextChannel
 from discord.abc import GuildChannel
+from chauff_cmn.logging import logger as log
 
 from settings import settings
 
@@ -29,7 +30,7 @@ async def create_ticket(for_member: Member, category_support: CategoryChannel, o
             ),
         )
     except Exception as e:
-        pass
+        log.error(e)
     return ticket
 
 
